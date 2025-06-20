@@ -4,7 +4,9 @@
 
 require_once __DIR__ . '/../app/bootstrap.php';
 
-use App\Core\Services\AttendanceService;
+// The AttendanceService class is loaded via bootstrap.php into the global namespace,
+// so the "use" statement is not needed and was causing the error.
+// REMOVED: use App\Core\Services\AttendanceService;
 
 echo "Starting attendance pull script...\n";
 
@@ -17,12 +19,14 @@ if (empty($devices)) {
     exit;
 }
 
+// Since the class is loaded globally, it can be instantiated directly.
 $service = new AttendanceService($pdo);
 
 foreach ($devices as $device) {
     echo "---------------------------------\n";
     echo "Processing device: {$device['name']} ({$device['ip_address']})\n";
 
+    // Dynamically load the correct driver for the device brand
     $driver_class = ucfirst($device['device_brand']) . 'Driver';
     $driver_file = __DIR__ . '/../app/core/drivers/' . $driver_class . '.php';
 
@@ -30,6 +34,9 @@ foreach ($devices as $device) {
         echo "[ERROR] Driver file not found: {$driver_file}\n";
         continue;
     }
+    
+    // The interface should be included to ensure driver compatibility
+    require_once __DIR__ . '/../app/core/drivers/DeviceDriverInterface.php';
     require_once $driver_file;
     
     if (!class_exists($driver_class)) {
@@ -56,7 +63,7 @@ foreach ($devices as $device) {
 
     echo "[INFO] Found " . count($logs) . " new log(s). Saving to database...\n";
 
-    // **FIXED**: Pass the device ID to the service
+    // Pass the device ID to the service to correctly associate the logs
     $saved_count = $service->saveStandardizedLogs($logs, $device['id']);
 
     echo "[SUCCESS] Successfully saved {$saved_count} log(s).\n";
