@@ -1,319 +1,556 @@
--- HR Portal Database Schema & Sample Data
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
 --
--- This script will:
--- 1. Create the database 'hr_portal' if it doesn't already exist.
--- 2. Drop existing tables to ensure a clean setup.
--- 3. Create all required tables for the HR Portal application.
--- 4. Define primary keys, foreign keys, and other constraints.
--- 5. Insert sample data for users, departments, leave types, etc.
--- 6. Set the password for all created users to '111'.
+-- Host: 127.0.0.1
+-- Generation Time: Jun 20, 2025 at 08:52 PM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: `hr_portal`
 --
 
--- Create and use the database
-CREATE DATABASE IF NOT EXISTS `hr_portal` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-USE `hr_portal`;
-
-SET NAMES utf8mb4;
-SET time_zone = '+00:00';
-SET foreign_key_checks = 0;
-
---
--- Table structure for table `audit_logs`
---
-DROP TABLE IF EXISTS `audit_logs`;
-CREATE TABLE `audit_logs` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) DEFAULT NULL,
-  `action` varchar(255) NOT NULL,
-  `timestamp` timestamp NOT NULL DEFAULT current_timestamp(),
-  `details` text DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `user_id` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `attendance_logs`
 --
-DROP TABLE IF EXISTS `attendance_logs`;
+
 CREATE TABLE `attendance_logs` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL,
-  `device_id` int(11) DEFAULT NULL,
-  `punch_time` datetime NOT NULL,
-  `status` enum('Check-In','Check-Out') NOT NULL,
-  `work_state` int(11) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `is_manual` tinyint(1) NOT NULL DEFAULT 0,
-  `is_violation` tinyint(1) NOT NULL DEFAULT 0,
-  `violation_reason` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `user_id` (`user_id`),
-  KEY `device_id` (`device_id`)
+  `id` bigint(20) NOT NULL,
+  `device_id` int(11) NOT NULL COMMENT 'Foreign key to the devices table',
+  `employee_code` varchar(50) NOT NULL COMMENT 'The User ID from the machine',
+  `punch_time` datetime NOT NULL COMMENT 'The exact date and time of the punch',
+  `punch_state` int(11) NOT NULL COMMENT 'Standardized code: 0=Check-In, 1=Check-Out, 2=Break-Out, 3=Break-In etc.',
+  `work_code` varchar(50) DEFAULT NULL COMMENT 'Optional work code, if supported by the device',
+  `is_processed` tinyint(1) DEFAULT 0 COMMENT 'Flag to show if this log has been processed into a final timesheet',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Staging table for raw attendance data from devices';
+
+--
+-- Truncate table before insert `attendance_logs`
+--
+
+TRUNCATE TABLE `attendance_logs`;
+--
+-- Dumping data for table `attendance_logs`
+--
+
+INSERT INTO `attendance_logs` (`id`, `device_id`, `employee_code`, `punch_time`, `punch_state`, `work_code`, `is_processed`, `created_at`) VALUES
+(1, 2, '1000', '2025-06-20 09:00:01', 0, NULL, 0, '2025-06-20 18:36:08'),
+(2, 2, '1002', '2025-06-20 09:01:30', 0, NULL, 0, '2025-06-20 18:36:08'),
+(3, 2, '1000', '2025-06-20 15:00:01', 1, NULL, 0, '2025-06-20 18:39:57'),
+(4, 2, '1002', '2025-06-20 15:01:30', 1, NULL, 0, '2025-06-20 18:39:57'),
+(5, 2, '1005', '2025-06-20 09:00:01', 0, NULL, 0, '2025-06-20 18:44:49'),
+(6, 2, '1005', '2025-06-20 15:00:01', 1, NULL, 0, '2025-06-20 18:44:53');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `audit_logs`
+--
+
+CREATE TABLE `audit_logs` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `action` varchar(255) NOT NULL,
+  `details` text DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Inserting sample data for `attendance_logs`
+-- Truncate table before insert `audit_logs`
 --
-INSERT INTO `attendance_logs` (`user_id`, `device_id`, `punch_time`, `status`, `is_violation`) VALUES
-(4, 1, CONCAT(CURDATE(), ' 08:55:00'), 'Check-In', 0),
-(4, 1, CONCAT(CURDATE(), ' 17:05:00'), 'Check-Out', 0),
-(5, 1, CONCAT(CURDATE(), ' 09:15:00'), 'Check-In', 0),
-(5, 1, CONCAT(CURDATE(), ' 17:30:00'), 'Check-Out', 0),
-(5, 1, CONCAT(CURDATE() - INTERVAL 1 DAY, ' 09:00:00'), 'Check-In', 0),
-(5, 1, CONCAT(CURDATE() - INTERVAL 1 DAY, ' 17:00:00'), 'Check-Out', 0);
 
+TRUNCATE TABLE `audit_logs`;
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `departments`
 --
-DROP TABLE IF EXISTS `departments`;
+
 CREATE TABLE `departments` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `name` (`name`)
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Inserting sample data for `departments`
+-- Truncate table before insert `departments`
 --
+
+TRUNCATE TABLE `departments`;
+--
+-- Dumping data for table `departments`
+--
+
 INSERT INTO `departments` (`id`, `name`) VALUES
-(1, 'Management'),
-(2, 'Human Resources'),
-(3, 'IT'),
-(4, 'Sales & Marketing');
+(1, 'Human Resources'),
+(2, 'Engineering'),
+(3, 'Marketing');
+
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `devices`
 --
-DROP TABLE IF EXISTS `devices`;
+
 CREATE TABLE `devices` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
-  `ip_address` varchar(45) NOT NULL,
-  `port` int(11) NOT NULL,
-  `device_type` enum('ZKTeco','Fingertec') NOT NULL,
-  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL COMMENT 'A user-friendly name, e.g., "Main Entrance"',
+  `ip_address` varchar(45) NOT NULL COMMENT 'Local IP for PULL mode, public IP for reference in PUSH mode',
+  `port` int(11) NOT NULL DEFAULT 4370,
+  `device_brand` varchar(50) NOT NULL COMMENT 'The driver to use, e.g., fingertec, zkteco',
+  `serial_number` varchar(100) DEFAULT NULL,
+  `communication_key` varchar(255) DEFAULT '0' COMMENT 'Device password, if any',
+  `is_active` tinyint(1) DEFAULT 1 COMMENT 'Toggle whether the sync script should poll this device',
+  `last_sync_timestamp` datetime DEFAULT NULL COMMENT 'Tracks the last successful communication for PULL mode',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `com_key` varchar(255) DEFAULT '0',
-  `last_sync` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `ip_address` (`ip_address`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Stores configuration for physical attendance devices';
 
 --
--- Inserting sample data for `devices`
+-- Truncate table before insert `devices`
 --
-INSERT INTO `devices` (`id`, `name`, `ip_address`, `port`, `device_type`, `is_active`, `com_key`) VALUES
-(1, 'Main Entrance Device', '192.168.1.201', 4370, 'ZKTeco', 1, '0');
+
+TRUNCATE TABLE `devices`;
+--
+-- Dumping data for table `devices`
+--
+
+INSERT INTO `devices` (`id`, `name`, `ip_address`, `port`, `device_brand`, `serial_number`, `communication_key`, `is_active`, `last_sync_timestamp`, `created_at`, `updated_at`) VALUES
+(2, 'Test Device', '127.0.0.1', 4370, 'zkteco', 'TEST-SN-12345', '0', 1, NULL, '2025-06-20 18:29:33', '2025-06-20 18:29:33');
+
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `leave_balances`
 --
-DROP TABLE IF EXISTS `leave_balances`;
+
 CREATE TABLE `leave_balances` (
+  `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `leave_type_id` int(11) NOT NULL,
-  `balance` decimal(5,2) NOT NULL DEFAULT 0.00,
-  PRIMARY KEY (`user_id`,`leave_type_id`),
-  KEY `leave_type_id` (`leave_type_id`)
+  `balance_days` float NOT NULL,
+  `last_updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `last_accrual_date` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Inserting sample data for `leave_balances`
+-- Truncate table before insert `leave_balances`
 --
-INSERT INTO `leave_balances` (`user_id`, `leave_type_id`, `balance`) VALUES
-(1, 1, 21.00), (1, 2, 7.00), (1, 3, 999.00),
-(2, 1, 21.00), (2, 2, 7.00), (2, 3, 999.00),
-(3, 1, 21.00), (3, 2, 7.00), (3, 3, 999.00),
-(4, 1, 21.00), (4, 2, 7.00), (4, 3, 999.00),
-(5, 1, 15.50), (5, 2, 5.00), (5, 3, 999.00);
 
+TRUNCATE TABLE `leave_balances`;
+--
+-- Dumping data for table `leave_balances`
+--
 
---
--- Table structure for table `leave_requests`
---
-DROP TABLE IF EXISTS `leave_requests`;
-CREATE TABLE `leave_requests` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL,
-  `leave_type_id` int(11) NOT NULL,
-  `start_date` date NOT NULL,
-  `end_date` date NOT NULL,
-  `reason` text DEFAULT NULL,
-  `status` enum('pending_manager','pending_hr','approved','rejected','cancelled') NOT NULL DEFAULT 'pending_manager',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `manager_id` int(11) DEFAULT NULL,
-  `hr_manager_id` int(11) DEFAULT NULL,
-  `manager_action_date` datetime DEFAULT NULL,
-  `hr_action_date` datetime DEFAULT NULL,
-  `rejection_reason` text DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `user_id` (`user_id`),
-  KEY `leave_type_id` (`leave_type_id`),
-  KEY `manager_id` (`manager_id`),
-  KEY `hr_manager_id` (`hr_manager_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+INSERT INTO `leave_balances` (`id`, `user_id`, `leave_type_id`, `balance_days`, `last_updated_at`, `last_accrual_date`) VALUES
+(1, 3, 1, 9, '2025-06-20 16:25:46', '2025-01-01'),
+(2, 3, 2, 5, '2025-06-20 15:24:11', '2025-01-01');
 
---
--- Inserting sample data for `leave_requests`
---
-INSERT INTO `leave_requests` (`id`, `user_id`, `leave_type_id`, `start_date`, `end_date`, `reason`, `status`, `manager_id`) VALUES
-(1, 4, 1, CURDATE() + INTERVAL 10 DAY, CURDATE() + INTERVAL 11 DAY, 'Family vacation.', 'pending_manager', 3),
-(2, 5, 2, CURDATE() - INTERVAL 1 DAY, CURDATE() - INTERVAL 1 DAY, 'Feeling unwell.', 'pending_hr', 3),
-(3, 5, 1, CURDATE() + INTERVAL 20 DAY, CURDATE() + INTERVAL 20 DAY, 'Personal day.', 'approved', 3),
-(4, 4, 1, CURDATE() + INTERVAL 5 DAY, CURDATE() + INTERVAL 5 DAY, 'Doctor appointment.', 'rejected', 3);
-
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `leave_types`
 --
-DROP TABLE IF EXISTS `leave_types`;
+
 CREATE TABLE `leave_types` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
   `name` varchar(255) NOT NULL,
-  `default_balance` decimal(5,2) NOT NULL DEFAULT 0.00,
-  `is_active` tinyint(1) NOT NULL DEFAULT 1,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `name` (`name`)
+  `accrual_days_per_year` float NOT NULL DEFAULT 0,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Inserting sample data for `leave_types`
+-- Truncate table before insert `leave_types`
 --
-INSERT INTO `leave_types` (`id`, `name`, `default_balance`) VALUES
-(1, 'Annual Leave', 21.00),
-(2, 'Sick Leave', 7.00),
-(3, 'Unpaid Leave', 999.00);
 
+TRUNCATE TABLE `leave_types`;
+--
+-- Dumping data for table `leave_types`
+--
+
+INSERT INTO `leave_types` (`id`, `name`, `accrual_days_per_year`, `is_active`) VALUES
+(1, 'Annual Leave', 21, 1),
+(2, 'Sick Leave', 7, 1),
+(3, 'Unpaid Leave', 0, 1);
+
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `notifications`
 --
-DROP TABLE IF EXISTS `notifications`;
+
 CREATE TABLE `notifications` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
-  `message` text NOT NULL,
-  `link` varchar(255) DEFAULT NULL,
+  `message` varchar(255) NOT NULL,
   `is_read` tinyint(1) NOT NULL DEFAULT 0,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  KEY `user_id` (`user_id`)
+  `request_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Truncate table before insert `notifications`
+--
+
+TRUNCATE TABLE `notifications`;
+--
+-- Dumping data for table `notifications`
+--
+
+INSERT INTO `notifications` (`id`, `user_id`, `message`, `is_read`, `request_id`, `created_at`) VALUES
+(1, 3, 'Your request was approved by your manager and sent to HR.', 0, 1, '2025-06-20 16:22:32'),
+(2, 1, 'A request from John Doe requires final approval.', 0, 1, '2025-06-20 16:22:32'),
+(3, 2, 'A request from John Doe requires final approval.', 0, 1, '2025-06-20 16:22:32'),
+(4, 5, 'A request from John Doe requires final approval.', 1, 1, '2025-06-20 16:22:32'),
+(5, 3, 'Your vacation request has received final approval.', 0, 1, '2025-06-20 16:22:39'),
+(6, 4, 'New vacation request from John Doe.', 0, 2, '2025-06-20 16:25:33'),
+(7, 1, 'New request submitted by John Doe, awaiting manager review.', 0, 2, '2025-06-20 16:25:33'),
+(8, 2, 'New request submitted by John Doe, awaiting manager review.', 0, 2, '2025-06-20 16:25:33'),
+(9, 5, 'New request submitted by John Doe, awaiting manager review.', 1, 2, '2025-06-20 16:25:33'),
+(10, 3, 'Your request was approved by your manager and sent to HR.', 0, 2, '2025-06-20 16:25:39'),
+(11, 1, 'A request from John Doe requires final approval.', 0, 2, '2025-06-20 16:25:39'),
+(12, 2, 'A request from John Doe requires final approval.', 0, 2, '2025-06-20 16:25:39'),
+(13, 5, 'A request from John Doe requires final approval.', 1, 2, '2025-06-20 16:25:39'),
+(14, 3, 'Your vacation request has received final approval.', 0, 2, '2025-06-20 16:25:46');
+
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `request_attachments`
 --
-DROP TABLE IF EXISTS `request_attachments`;
+
 CREATE TABLE `request_attachments` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
   `request_id` int(11) NOT NULL,
-  `file_path` varchar(255) NOT NULL,
-  `original_filename` varchar(255) NOT NULL,
-  `uploaded_by` int(11) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  KEY `request_id` (`request_id`),
-  KEY `uploaded_by` (`uploaded_by`)
+  `file_name` varchar(255) NOT NULL,
+  `stored_name` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Truncate table before insert `request_attachments`
+--
+
+TRUNCATE TABLE `request_attachments`;
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `request_comments`
 --
-DROP TABLE IF EXISTS `request_comments`;
+
 CREATE TABLE `request_comments` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
   `request_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `comment` text NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  KEY `request_id` (`request_id`),
-  KEY `user_id` (`user_id`)
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Inserting sample data for `request_comments`
+-- Truncate table before insert `request_comments`
 --
-INSERT INTO `request_comments` (`request_id`, `user_id`, `comment`) VALUES
-(2, 3, 'Approved. Please proceed with HR.'),
-(3, 3, 'Approved from my side.'),
-(3, 2, 'Approved. Your balance has been updated.'),
-(4, 3, 'Sorry, we have critical deadlines that week. Please reschedule.');
 
+TRUNCATE TABLE `request_comments`;
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `users`
 --
-DROP TABLE IF EXISTS `users`;
+
 CREATE TABLE `users` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
+  `employee_code` varchar(50) DEFAULT NULL,
   `full_name` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `role` enum('employee','manager','hr_manager','admin') NOT NULL DEFAULT 'employee',
+  `role` enum('user','manager','hr','hr_manager','admin') NOT NULL DEFAULT 'user',
   `department_id` int(11) DEFAULT NULL,
   `direct_manager_id` int(11) DEFAULT NULL,
-  `employee_code` varchar(50) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `is_active` tinyint(1) NOT NULL DEFAULT 1,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `email` (`email`),
-  UNIQUE KEY `employee_code` (`employee_code`),
-  KEY `department_id` (`department_id`),
-  KEY `direct_manager_id` (`direct_manager_id`)
+  `must_change_password` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Inserting sample data for `users`
--- Note: The password hash '$2y$10$wI/h81K6u7mZJcm2I39fLuA/ugOsUaWYSJ5vYyP9f10/I1l.qMhIm' is for the password '111'.
+-- Truncate table before insert `users`
 --
-INSERT INTO `users` (`id`, `full_name`, `email`, `password`, `role`, `department_id`, `direct_manager_id`, `employee_code`, `is_active`) VALUES
-(1, 'Admin User', 'admin@example.com', '$2y$10$wI/h81K6u7mZJcm2I39fLuA/ugOsUaWYSJ5vYyP9f10/I1l.qMhIm', 'admin', 1, NULL, '001', 1),
-(2, 'HR Manager', 'hr@example.com', '$2y$10$wI/h81K6u7mZJcm2I39fLuA/ugOsUaWYSJ5vYyP9f10/I1l.qMhIm', 'hr_manager', 2, 1, '002', 1),
-(3, 'Team Manager', 'manager@example.com', '$2y$10$wI/h81K6u7mZJcm2I39fLuA/ugOsUaWYSJ5vYyP9f10/I1l.qMhIm', 'manager', 3, 1, '003', 1),
-(4, 'John Doe', 'employee1@example.com', '$2y$10$wI/h81K6u7mZJcm2I39fLuA/ugOsUaWYSJ5vYyP9f10/I1l.qMhIm', 'employee', 3, 3, '004', 1),
-(5, 'Jane Smith', 'employee2@example.com', '$2y$10$wI/h81K6u7mZJcm2I39fLuA/ugOsUaWYSJ5vYyP9f10/I1l.qMhIm', 'employee', 4, 3, '005', 1);
+
+TRUNCATE TABLE `users`;
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`id`, `employee_code`, `full_name`, `email`, `password`, `role`, `department_id`, `direct_manager_id`, `must_change_password`) VALUES
+(1, '1001', 'Admin User', 'admin@example.com', '$2y$10$23ct2CuBTITAEeP0wIksTun3jicGZmtCcxyhhncr3QhwpmBeg02tS', 'admin', NULL, NULL, 0),
+(2, '1002', 'HR Manager', 'hr.manager@example.com', '$2y$10$23ct2CuBTITAEeP0wIksTun3jicGZmtCcxyhhncr3QhwpmBeg02tS', 'hr_manager', 1, 1, 0),
+(3, NULL, 'John Doe', 'john.doe@example.com', '$2y$10$23ct2CuBTITAEeP0wIksTun3jicGZmtCcxyhhncr3QhwpmBeg02tS', 'user', 2, 4, 0),
+(4, NULL, 'Jane Smith', 'jane.smith@example.com', '$2y$10$23ct2CuBTITAEeP0wIksTun3jicGZmtCcxyhhncr3QhwpmBeg02tS', 'manager', 2, 1, 0),
+(5, '1000', 'Joseph Ashraf', 'eptj0e@gmail.com', '$2y$10$23ct2CuBTITAEeP0wIksTun3jicGZmtCcxyhhncr3QhwpmBeg02tS', 'admin', NULL, NULL, 0);
+
+-- --------------------------------------------------------
 
 --
--- Adding Foreign Key Constraints
+-- Table structure for table `vacation_requests`
+--
+
+CREATE TABLE `vacation_requests` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `reason` text DEFAULT NULL,
+  `manager_id` int(11) DEFAULT NULL,
+  `status` enum('pending_manager','pending_hr','approved','rejected','cancelled') NOT NULL DEFAULT 'pending_manager',
+  `leave_type_id` int(11) DEFAULT NULL,
+  `manager_action_at` timestamp NULL DEFAULT NULL,
+  `hr_id` int(11) DEFAULT NULL,
+  `hr_action_at` timestamp NULL DEFAULT NULL,
+  `rejection_reason` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Truncate table before insert `vacation_requests`
+--
+
+TRUNCATE TABLE `vacation_requests`;
+--
+-- Dumping data for table `vacation_requests`
+--
+
+INSERT INTO `vacation_requests` (`id`, `user_id`, `start_date`, `end_date`, `reason`, `manager_id`, `status`, `leave_type_id`, `manager_action_at`, `hr_id`, `hr_action_at`, `rejection_reason`, `created_at`) VALUES
+(1, 3, '2025-07-01', '2025-07-05', 'Family vacation.', 4, 'approved', 1, '2025-06-20 16:22:32', 2, '2025-06-20 16:22:39', NULL, '2025-06-20 11:30:00'),
+(2, 3, '2025-06-20', '2025-06-20', '', 4, 'approved', 1, '2025-06-20 16:25:39', 2, '2025-06-20 16:25:46', NULL, '2025-06-20 16:25:33');
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `attendance_logs`
+--
+ALTER TABLE `attendance_logs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_employee_code` (`employee_code`),
+  ADD KEY `idx_is_processed` (`is_processed`),
+  ADD KEY `device_id` (`device_id`);
+
+--
+-- Indexes for table `audit_logs`
+--
+ALTER TABLE `audit_logs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `departments`
+--
+ALTER TABLE `departments`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `devices`
+--
+ALTER TABLE `devices`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `serial_number` (`serial_number`);
+
+--
+-- Indexes for table `leave_balances`
+--
+ALTER TABLE `leave_balances`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `user_leave_type` (`user_id`,`leave_type_id`),
+  ADD KEY `leave_type_id` (`leave_type_id`);
+
+--
+-- Indexes for table `leave_types`
+--
+ALTER TABLE `leave_types`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `request_id` (`request_id`);
+
+--
+-- Indexes for table `request_attachments`
+--
+ALTER TABLE `request_attachments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `request_id` (`request_id`);
+
+--
+-- Indexes for table `request_comments`
+--
+ALTER TABLE `request_comments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `request_id` (`request_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `email` (`email`),
+  ADD UNIQUE KEY `employee_code` (`employee_code`),
+  ADD KEY `department_id` (`department_id`),
+  ADD KEY `direct_manager_id` (`direct_manager_id`);
+
+--
+-- Indexes for table `vacation_requests`
+--
+ALTER TABLE `vacation_requests`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `manager_id` (`manager_id`),
+  ADD KEY `leave_type_id` (`leave_type_id`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `attendance_logs`
+--
+ALTER TABLE `attendance_logs`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `audit_logs`
+--
+ALTER TABLE `audit_logs`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `departments`
+--
+ALTER TABLE `departments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `devices`
+--
+ALTER TABLE `devices`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `leave_balances`
+--
+ALTER TABLE `leave_balances`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `leave_types`
+--
+ALTER TABLE `leave_types`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `notifications`
+--
+ALTER TABLE `notifications`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+
+--
+-- AUTO_INCREMENT for table `request_attachments`
+--
+ALTER TABLE `request_attachments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `request_comments`
+--
+ALTER TABLE `request_comments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT for table `vacation_requests`
+--
+ALTER TABLE `vacation_requests`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `attendance_logs`
+--
+ALTER TABLE `attendance_logs`
+  ADD CONSTRAINT `attendance_logs_ibfk_1` FOREIGN KEY (`device_id`) REFERENCES `devices` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
   ADD CONSTRAINT `audit_logs_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
-ALTER TABLE `attendance_logs`
-  ADD CONSTRAINT `attendance_logs_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `attendance_logs_ibfk_2` FOREIGN KEY (`device_id`) REFERENCES `devices` (`id`) ON DELETE SET NULL;
-
+--
+-- Constraints for table `leave_balances`
+--
 ALTER TABLE `leave_balances`
   ADD CONSTRAINT `leave_balances_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `leave_balances_ibfk_2` FOREIGN KEY (`leave_type_id`) REFERENCES `leave_types` (`id`) ON DELETE CASCADE;
 
-ALTER TABLE `leave_requests`
-  ADD CONSTRAINT `leave_requests_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `leave_requests_ibfk_2` FOREIGN KEY (`leave_type_id`) REFERENCES `leave_types` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `leave_requests_ibfk_3` FOREIGN KEY (`manager_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `leave_requests_ibfk_4` FOREIGN KEY (`hr_manager_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
-
+--
+-- Constraints for table `notifications`
+--
 ALTER TABLE `notifications`
-  ADD CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `notifications_ibfk_2` FOREIGN KEY (`request_id`) REFERENCES `vacation_requests` (`id`) ON DELETE CASCADE;
 
+--
+-- Constraints for table `request_attachments`
+--
 ALTER TABLE `request_attachments`
-  ADD CONSTRAINT `request_attachments_ibfk_1` FOREIGN KEY (`request_id`) REFERENCES `leave_requests` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `request_attachments_ibfk_2` FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `request_attachments_ibfk_1` FOREIGN KEY (`request_id`) REFERENCES `vacation_requests` (`id`) ON DELETE CASCADE;
 
+--
+-- Constraints for table `request_comments`
+--
 ALTER TABLE `request_comments`
-  ADD CONSTRAINT `request_comments_ibfk_1` FOREIGN KEY (`request_id`) REFERENCES `leave_requests` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `request_comments_ibfk_1` FOREIGN KEY (`request_id`) REFERENCES `vacation_requests` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `request_comments_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
+--
+-- Constraints for table `users`
+--
 ALTER TABLE `users`
   ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `users_ibfk_2` FOREIGN KEY (`direct_manager_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
-  
-SET foreign_key_checks = 1;
+
+--
+-- Constraints for table `vacation_requests`
+--
+ALTER TABLE `vacation_requests`
+  ADD CONSTRAINT `vacation_requests_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `vacation_requests_ibfk_2` FOREIGN KEY (`manager_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `vacation_requests_ibfk_3` FOREIGN KEY (`leave_type_id`) REFERENCES `leave_types` (`id`) ON DELETE SET NULL;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
