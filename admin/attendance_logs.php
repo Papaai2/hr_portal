@@ -41,7 +41,9 @@ if ($device_id && is_numeric($device_id)) {
 $where_sql = '';
 if (!empty($where_clauses)) {
     $where_sql = "WHERE " . implode(' AND ', $where_clauses);
-    $filter_query_string = http_build_query($_GET); // Build query string for pagination
+    parse_str($_SERVER['QUERY_STRING'] ?? '', $query_array);
+    unset($query_array['page']);
+    $filter_query_string = http_build_query($query_array);
 }
 
 
@@ -116,7 +118,7 @@ function getPunchStateText($state) {
                     <option value="">All Employees</option>
                     <?php foreach($all_users as $user): ?>
                         <option value="<?= $user['id'] ?>" <?= ($user_id == $user['id']) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($user['full_name']) ?> (<?= htmlspecialchars($user['employee_code']) ?>)
+                            <?= htmlspecialchars($user['full_name']) ?> (<?= htmlspecialchars($user['employee_code'] ?? 'N/A') ?>)
                         </option>
                     <?php endforeach; ?>
                 </select>

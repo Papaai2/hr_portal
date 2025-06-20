@@ -8,7 +8,7 @@ require_once __DIR__ . '/../core/config.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo isset($page_title) ? htmlspecialchars($page_title) . ' - ' . htmlspecialchars(SITE_NAME) : htmlspecialchars(SITE_NAME); ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" xintegrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/dashboard-improvements.css">
@@ -48,13 +48,14 @@ require_once __DIR__ . '/../core/config.php';
                           <ul class="dropdown-menu" aria-labelledby="hr-reports-dropdown">
                             <li><a class="dropdown-item" href="/reports/hr_history.php">Full History</a></li>
                             <li><a class="dropdown-item" href="/reports/user_balances.php">User Balances</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/reports/timesheet.php">Daily Timesheet</a></li>
                           </ul>
                         </li>
                     <?php endif; ?>
                     
                     <?php if (in_array($_SESSION['role'], ['hr_manager', 'admin'])): ?>
                         <li class="nav-item"><a class="nav-link" href="/admin/index.php">Admin Panel</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/audit_logs.php">Audit Logs</a></li>
                     <?php endif; ?>
                 <?php endif; ?>
             </ul>
@@ -77,6 +78,8 @@ require_once __DIR__ . '/../core/config.php';
                             <i class="bi bi-person-circle"></i> <?php echo htmlspecialchars($_SESSION['full_name']); ?>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end mt-2">
+                            <li><a class="dropdown-item" href="/admin/audit_logs.php">Audit Logs</a></li>
+                            <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="/logout.php"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
                         </ul>
                     </li>
