@@ -15,7 +15,7 @@ $end_date = trim($_GET['end_date'] ?? '');
 $user_id_filter = trim($_GET['user_id'] ?? '');
 
 $sql_users = "
-    SELECT u.id AS user_id, u.full_name, u.email, u.role, d.name AS department_name,
+    SELECT u.id AS user_id, u.full_name, u.email, u.role, u.employee_code, d.name AS department_name, -- ADDED u.employee_code
            GROUP_CONCAT(CONCAT(lt.name, ':', lb.balance_days) ORDER BY lt.name SEPARATOR ';') AS balances_str
     FROM users u
     LEFT JOIN leave_balances lb ON u.id = lb.user_id
@@ -27,9 +27,10 @@ $where_clauses = ["lt.is_active = 1"];
 $sql_params = [];
 
 if (!empty($search_query)) {
-    $where_clauses[] = "(u.full_name LIKE ? OR u.email LIKE ?)";
+    $where_clauses[] = "(u.full_name LIKE ? OR u.email LIKE ? OR u.employee_code LIKE ?)"; // ADDED u.employee_code to search
     $sql_params[] = "%$search_query%";
     $sql_params[] = "%$search_query%";
+    $sql_params[] = "%$search_query%"; // ADDED
 }
 if(!empty($user_id_filter)) {
     $where_clauses[] = "u.id = ?";
@@ -51,7 +52,7 @@ if (!empty($where_clauses)) {
     $sql_users .= " WHERE " . implode(' AND ', $where_clauses);
 }
 
-$sql_users .= " GROUP BY u.id, u.full_name, u.email, u.role, d.name ORDER BY u.full_name ASC";
+$sql_users .= " GROUP BY u.id, u.full_name, u.email, u.role, u.employee_code, d.name ORDER BY u.full_name ASC"; // ADDED u.employee_code to GROUP BY
 
 try {
     $stmt_users = $pdo->prepare($sql_users);
@@ -60,10 +61,11 @@ try {
 } catch (PDOException $e) {
     $error = "Database error fetching user balances: " . $e->getMessage();
     $users_data = [];
+    error_log("Error fetching user balances: " . $e->getMessage()); // Log error
 }
 
 // Fetch all users for the dropdown filter
-$all_users_for_filter = $pdo->query("SELECT id, full_name, email FROM users ORDER BY full_name ASC")->fetchAll();
+$all_users_for_filter = $pdo->query("SELECT id, full_name, email, employee_code FROM users ORDER BY full_name ASC")->fetchAll(); // ADDED employee_code for filter display
 
 
 // --- CSV Export Logic ---
@@ -72,7 +74,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     header('Content-Disposition: attachment; filename="user_balances_report_'.date('Y-m-d').'.csv"');
 
     $output = fopen('php://output', 'w');
-    fputcsv($output, ['Employee Name', 'Email', 'Role', 'Department', 'Leave Type', 'Balance (Days)']);
+    fputcsv($output, ['Employee Name', 'Email', 'Role', 'Department', 'Employee Code', 'Leave Type', 'Balance (Days)']); // ADDED 'Employee Code'
 
     foreach ($users_data as $user) {
         if ($user['balances_str']) {
@@ -82,14 +84,14 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                 if(isset($type_name) && isset($balance)) {
                     fputcsv($output, [
                         $user['full_name'], $user['email'], ucfirst($user['role']),
-                        $user['department_name'] ?? 'N/A', $type_name, number_format((float)$balance, 2)
+                        $user['department_name'] ?? 'N/A', $user['employee_code'] ?? 'N/A', $type_name, number_format((float)$balance, 2) // ADDED $user['employee_code']
                     ]);
                 }
             }
         } else {
              fputcsv($output, [
                 $user['full_name'], $user['email'], ucfirst($user['role']),
-                $user['department_name'] ?? 'N/A', 'N/A', '0.00'
+                $user['department_name'] ?? 'N/A', $user['employee_code'] ?? 'N/A', 'N/A', '0.00' // ADDED $user['employee_code']
             ]);
         }
     }
@@ -105,7 +107,7 @@ include __DIR__ . '/../app/templates/header.php';
     <h1 class="h2">User Leave Balances Report</h1>
 </div>
 
-<?php if ($error): ?><div class="alert alert-danger"><?= $error ?></div><?php endif; ?>
+<?php if ($error): ?><div class="alert alert-danger"><?= htmlspecialchars($error) ?></div><?php endif; ?>
 
 <div class="card shadow-sm">
     <div class="card-header">
@@ -115,17 +117,15 @@ include __DIR__ . '/../app/templates/header.php';
         <form action="user_balances.php" method="get" class="mb-4">
             <div class="row g-3">
                 <div class="col-md-3">
-                    <label for="search" class="form-label">Search Name/Email</label>
-                    <input type="text" class="form-control" id="search" name="search" value="<?= htmlspecialchars($search_query) ?>">
+                    <label for="search" class="form-label">Search Name/Email/Employee Code</label> <input type="text" class="form-control" id="search" name="search" value="<?= htmlspecialchars($search_query) ?>">
                 </div>
                 <div class="col-md-3">
                     <label for="user_id" class="form-label">Specific User</label>
                     <select class="form-select" id="user_id" name="user_id">
                         <option value="">All Users</option>
                         <?php foreach($all_users_for_filter as $user_filter): ?>
-                            <option value="<?= $user_filter['id'] ?>" <?= $user_id_filter == $user_filter['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($user_filter['full_name']) ?>
-                            </option>
+                            <option value="<?= htmlspecialchars($user_filter['id']) ?>" <?= $user_id_filter == $user_filter['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($user_filter['full_name']) ?> (<?= htmlspecialchars($user_filter['employee_code'] ?? 'N/A') ?>) </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -161,7 +161,7 @@ include __DIR__ . '/../app/templates/header.php';
                 <thead class="table-light">
                     <tr>
                         <th>Employee Name</th>
-                        <th>Email</th>
+                        <th>Employee Code</th> <th>Email</th>
                         <th>Role</th>
                         <th>Department</th>
                         <th>Balances</th>
@@ -170,13 +170,12 @@ include __DIR__ . '/../app/templates/header.php';
                 <tbody>
                     <?php if (empty($users_data)): ?>
                         <tr>
-                            <td colspan="5" class="text-center text-muted p-4">No results found for the selected filters.</td>
-                        </tr>
+                            <td colspan="6" class="text-center text-muted p-4">No results found for the selected filters.</td> </tr>
                     <?php else: ?>
                         <?php foreach ($users_data as $user): ?>
                              <tr>
                                 <td><?= htmlspecialchars($user['full_name']); ?></td>
-                                <td><?= htmlspecialchars($user['email']); ?></td>
+                                <td><?= htmlspecialchars($user['employee_code'] ?? 'N/A'); ?></td> <td><?= htmlspecialchars($user['email']); ?></td>
                                 <td><?= ucfirst(htmlspecialchars($user['role'])); ?></td>
                                 <td><?= htmlspecialchars($user['department_name'] ?? 'N/A'); ?></td>
                                 <td>
@@ -187,9 +186,11 @@ include __DIR__ . '/../app/templates/header.php';
                                             <?php 
                                             $balances = explode(';', $user['balances_str']);
                                             foreach ($balances as $balance_pair): 
-                                                list($type_name, $balance) = explode(':', $balance_pair);
+                                                // Ensure $balance_pair is not empty before exploding
+                                                if (empty($balance_pair)) continue;
+                                                @list($type_name, $balance) = explode(':', $balance_pair);
                                             ?>
-                                                <li><strong><?= htmlspecialchars($type_name) ?>:</strong> <?= htmlspecialchars(number_format($balance, 2)) ?> days</li>
+                                                <li><strong><?= htmlspecialchars($type_name) ?>:</strong> <?= htmlspecialchars(number_format((float)$balance, 2)) ?> days</li>
                                             <?php endforeach; ?>
                                         </ul>
                                     <?php endif; ?>

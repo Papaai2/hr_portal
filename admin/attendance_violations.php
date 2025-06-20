@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $pdo->prepare("DELETE FROM attendance_logs WHERE id = ?");
                 $stmt->execute([$log_id]);
                 $success_message = "Punch record #{$log_id} has been deleted.";
+                log_audit_action($pdo, 'delete_attendance_punch', json_encode(['log_id' => $log_id]), get_current_user_id());
                 break;
 
             case 'swap_state':
@@ -31,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
                 $stmt->execute([$update_note, $log_id]);
                 $success_message = "Punch record #{$log_id} state has been swapped.";
+                log_audit_action($pdo, 'swap_punch_state', json_encode(['log_id' => $log_id]), get_current_user_id());
                 break;
 
             case 'add_punch':
@@ -51,12 +53,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $insert_note = "Manually added. " . $note;
-                // **FIXED**: Insert NULL for device_id on manual entries
                 $stmt = $pdo->prepare(
                     "INSERT INTO attendance_logs (employee_code, punch_time, punch_state, status, notes, device_id) VALUES (?, ?, ?, 'corrected', ?, NULL)"
                 );
                 $stmt->execute([$employee_code, $punch_time, $punch_state, $insert_note]);
                 $success_message = "Manual punch has been successfully added for employee #{$employee_code}.";
+                log_audit_action($pdo, 'add_manual_punch', json_encode(['employee_code' => $employee_code, 'punch_time' => $punch_time]), get_current_user_id());
                 break;
             
             default:
@@ -66,13 +68,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } catch (Exception $e) {
         $pdo->rollBack();
         $error_message = "An error occurred: " . $e->getMessage();
+        error_log("Attendance violation action error: " . $e->getMessage());
     }
 }
 
 
 // --- Fetch Data for Display ---
 $stmt = $pdo->query(
-    "SELECT al.*, u.full_name 
+    "SELECT al.*, u.full_name, u.employee_code -- ADDED u.employee_code
      FROM attendance_logs al 
      JOIN users u ON al.employee_code = u.employee_code 
      WHERE al.status = 'error' 
@@ -103,7 +106,7 @@ include __DIR__ . '/../app/templates/header.php';
                 <select name="user_id" id="user_id" class="form-select" required>
                     <option value="">Select Employee...</option>
                     <?php foreach ($users as $user): ?>
-                        <option value="<?= $user['id'] ?>"><?= htmlspecialchars($user['full_name'] . ' (' . $user['employee_code'] . ')') ?></option>
+                        <option value="<?= htmlspecialchars($user['id']) ?>"><?= htmlspecialchars($user['full_name'] . ' (' . $user['employee_code'] . ')') ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -133,25 +136,23 @@ include __DIR__ . '/../app/templates/header.php';
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-hover">
-                <thead><tr><th>Employee</th><th>Punch Time</th><th>Type</th><th>Violation</th><th class="text-end">Actions</th></tr></thead>
-                <tbody>
+                <thead><tr><th>Employee</th><th>Employee Code</th><th>Punch Time</th><th>Type</th><th>Violation</th><th class="text-end">Actions</th></tr></thead> <tbody>
                     <?php if (empty($violations)): ?>
-                        <tr><td colspan="5" class="text-center text-muted">No pending violations found. Great job!</td></tr>
-                    <?php endif; ?>
+                        <tr><td colspan="6" class="text-center text-muted">No pending violations found. Great job!</td></tr> <?php endif; ?>
                     <?php foreach ($violations as $v): ?>
                         <tr class="table-danger">
                             <td><?= htmlspecialchars($v['full_name']) ?></td>
-                            <td><?= htmlspecialchars((new DateTime($v['punch_time']))->format('Y-m-d H:i:s')) ?></td>
+                            <td><code class="text-muted"><?= htmlspecialchars($v['employee_code']) ?></code></td> <td><?= htmlspecialchars((new DateTime($v['punch_time']))->format('Y-m-d H:i:s')) ?></td>
                             <td><span class="badge bg-<?= $v['punch_state'] == 0 ? 'success' : 'secondary' ?>"><?= $v['punch_state'] == 0 ? 'IN' : 'OUT' ?></span></td>
                             <td><span class="badge bg-danger"><?= htmlspecialchars(str_replace('_', ' ', $v['violation_type'])) ?></span></td>
                             <td class="text-end">
                                 <form action="attendance_violations.php" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to swap the state for this punch?');">
-                                    <input type="hidden" name="log_id" value="<?= $v['id'] ?>">
+                                    <input type="hidden" name="log_id" value="<?= htmlspecialchars($v['id']) ?>">
                                     <input type="hidden" name="action" value="swap_state">
                                     <button type="submit" class="btn btn-sm btn-warning" title="Swap IN/OUT State"><i class="bi bi-arrow-left-right"></i> Swap</button>
                                 </form>
                                 <form action="attendance_violations.php" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to permanently delete this punch record?');">
-                                    <input type="hidden" name="log_id" value="<?= $v['id'] ?>">
+                                    <input type="hidden" name="log_id" value="<?= htmlspecialchars($v['id']) ?>">
                                     <input type="hidden" name="action" value="delete_punch">
                                     <button type="submit" class="btn btn-sm btn-danger" title="Delete Punch"><i class="bi bi-trash"></i> Delete</button>
                                 </form>

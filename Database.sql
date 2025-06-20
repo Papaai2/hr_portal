@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 21, 2025 at 12:00 AM
+-- Generation Time: Jun 20, 2025 at 11:52 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -20,8 +20,6 @@ SET time_zone = "+00:00";
 --
 -- Database: `hr_portal`
 --
-CREATE DATABASE IF NOT EXISTS `hr_portal` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-USE `hr_portal`;
 
 -- --------------------------------------------------------
 
@@ -34,12 +32,30 @@ CREATE TABLE `attendance_logs` (
   `device_id` int(11) DEFAULT NULL COMMENT 'Foreign key to devices. NULL for manual entry.',
   `employee_code` varchar(50) NOT NULL COMMENT 'The User ID from the machine',
   `punch_time` datetime NOT NULL COMMENT 'The exact date and time of the punch',
+  `expected_in` time DEFAULT NULL,
+  `expected_out` time DEFAULT NULL,
   `punch_state` int(11) NOT NULL COMMENT 'Standardized code: 0=Check-In, 1=Check-Out',
   `status` enum('unprocessed','corrected','error') NOT NULL DEFAULT 'unprocessed' COMMENT 'Processing status of the log entry',
   `violation_type` varchar(50) DEFAULT NULL COMMENT 'Type of violation, e.g., double_punch',
   `notes` text DEFAULT NULL COMMENT 'Notes for manual corrections or actions',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Staging table for raw and processed attendance data';
+
+--
+-- Truncate table before insert `attendance_logs`
+--
+
+TRUNCATE TABLE `attendance_logs`;
+--
+-- Dumping data for table `attendance_logs`
+--
+
+INSERT INTO `attendance_logs` (`id`, `device_id`, `employee_code`, `punch_time`, `expected_in`, `expected_out`, `punch_state`, `status`, `violation_type`, `notes`, `created_at`) VALUES
+(1, 1, 'ENG-001', '2025-06-21 08:59:10', NULL, NULL, 0, 'unprocessed', NULL, NULL, '2025-06-20 20:29:02'),
+(2, 1, 'ENG-002', '2025-06-21 09:03:25', NULL, NULL, 0, 'unprocessed', NULL, NULL, '2025-06-20 20:29:02'),
+(3, 1, 'HR-001', '2025-06-21 08:45:50', NULL, NULL, 0, 'unprocessed', NULL, NULL, '2025-06-20 20:29:02'),
+(4, 1, 'ENG-001', '2025-06-21 18:05:15', NULL, NULL, 1, 'unprocessed', NULL, NULL, '2025-06-20 20:29:02'),
+(5, 1, 'ENG-002', '2025-06-21 18:10:00', NULL, NULL, 1, 'unprocessed', NULL, NULL, '2025-06-20 20:29:02');
 
 -- --------------------------------------------------------
 
@@ -56,6 +72,24 @@ CREATE TABLE `audit_logs` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Truncate table before insert `audit_logs`
+--
+
+TRUNCATE TABLE `audit_logs`;
+--
+-- Dumping data for table `audit_logs`
+--
+
+INSERT INTO `audit_logs` (`id`, `user_id`, `action`, `details`, `ip_address`, `created_at`) VALUES
+(1, NULL, 'USER_LOGIN', 'User admin@example.com logged in successfully.', '127.0.0.1', '2025-06-20 20:29:02'),
+(2, NULL, 'USER_CREATE', 'Admin User created a new user: Marketing Specialist (marketing@example.com).', '127.0.0.1', '2025-06-20 20:29:02'),
+(3, 4, 'REQUEST_SUBMIT', 'User Engineering Manager submitted leave request #3.', '192.168.1.10', '2025-06-20 20:29:02'),
+(4, 2, 'REQUEST_REJECT', 'User HR Manager rejected leave request #4.', '127.0.0.1', '2025-06-20 20:29:02'),
+(5, 1, 'add_shift', '{\"name\":\"Fixed\"}', '127.0.0.1', '2025-06-20 21:39:11'),
+(6, 6, 'cancel_request', '{\"request_id\":5,\"status\":\"cancelled\"}', '127.0.0.1', '2025-06-20 21:47:59'),
+(7, 4, 'approve_request_manager', '{\"request_id\":6,\"status\":\"pending_hr\"}', '127.0.0.1', '2025-06-20 21:50:03');
+
 -- --------------------------------------------------------
 
 --
@@ -68,13 +102,19 @@ CREATE TABLE `departments` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
+-- Truncate table before insert `departments`
+--
+
+TRUNCATE TABLE `departments`;
+--
 -- Dumping data for table `departments`
 --
 
 INSERT INTO `departments` (`id`, `name`) VALUES
 (1, 'Human Resources'),
 (2, 'Engineering'),
-(3, 'Marketing');
+(3, 'Marketing'),
+(4, 'Sales');
 
 -- --------------------------------------------------------
 
@@ -97,11 +137,16 @@ CREATE TABLE `devices` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Stores configuration for physical attendance devices';
 
 --
+-- Truncate table before insert `devices`
+--
+
+TRUNCATE TABLE `devices`;
+--
 -- Dumping data for table `devices`
 --
 
-INSERT INTO `devices` (`id`, `name`, `ip_address`, `port`, `device_brand`, `serial_number`, `is_active`) VALUES
-(1, 'Main Entrance Device', '192.168.1.201', 4370, 'zkteco', 'ZK-12345ABC', 1);
+INSERT INTO `devices` (`id`, `name`, `ip_address`, `port`, `device_brand`, `serial_number`, `communication_key`, `is_active`, `last_sync_timestamp`, `created_at`, `updated_at`) VALUES
+(1, 'Main Entrance Device', '192.168.1.201', 4370, 'zkteco', 'ZK-12345ABC', '0', 1, NULL, '2025-06-20 20:27:27', '2025-06-20 20:27:27');
 
 -- --------------------------------------------------------
 
@@ -118,6 +163,29 @@ CREATE TABLE `leave_balances` (
   `last_accrual_date` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Truncate table before insert `leave_balances`
+--
+
+TRUNCATE TABLE `leave_balances`;
+--
+-- Dumping data for table `leave_balances`
+--
+
+INSERT INTO `leave_balances` (`id`, `user_id`, `leave_type_id`, `balance_days`, `last_updated_at`, `last_accrual_date`) VALUES
+(1, 2, 1, 21, '2025-06-20 20:29:02', NULL),
+(2, 2, 2, 7, '2025-06-20 20:29:02', NULL),
+(3, 3, 1, 21, '2025-06-20 20:29:02', NULL),
+(4, 3, 2, 7, '2025-06-20 20:29:02', NULL),
+(5, 4, 1, 21, '2025-06-20 20:29:02', NULL),
+(6, 4, 2, 7, '2025-06-20 20:29:02', NULL),
+(7, 5, 1, 16, '2025-06-20 20:30:11', NULL),
+(8, 5, 2, 7, '2025-06-20 20:29:02', NULL),
+(9, 6, 1, 19, '2025-06-20 20:31:55', NULL),
+(10, 6, 2, 7, '2025-06-20 20:29:02', NULL),
+(11, 7, 1, 15, '2025-06-20 20:29:02', NULL),
+(12, 7, 2, 5, '2025-06-20 20:29:02', NULL);
+
 -- --------------------------------------------------------
 
 --
@@ -131,6 +199,11 @@ CREATE TABLE `leave_types` (
   `is_active` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Truncate table before insert `leave_types`
+--
+
+TRUNCATE TABLE `leave_types`;
 --
 -- Dumping data for table `leave_types`
 --
@@ -155,6 +228,39 @@ CREATE TABLE `notifications` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Truncate table before insert `notifications`
+--
+
+TRUNCATE TABLE `notifications`;
+--
+-- Dumping data for table `notifications`
+--
+
+INSERT INTO `notifications` (`id`, `user_id`, `message`, `is_read`, `request_id`, `created_at`) VALUES
+(1, 4, 'Junior Engineer has submitted a new leave request for your approval.', 1, 1, '2025-06-20 20:29:02'),
+(2, 2, 'A leave request for Senior Engineer is awaiting your approval.', 0, 2, '2025-06-20 20:29:02'),
+(3, 3, 'A leave request for Senior Engineer is awaiting your approval.', 0, 2, '2025-06-20 20:29:02'),
+(4, 4, 'Your leave request for 2025-09-15 has been approved.', 1, 3, '2025-06-20 20:29:02'),
+(5, 3, 'Your leave request for 2025-07-20 has been rejected.', 0, 4, '2025-06-20 20:29:02'),
+(6, 5, 'Your vacation request has received final approval.', 0, 2, '2025-06-20 20:30:11'),
+(7, 6, 'Your request was approved by your manager and sent to HR.', 1, 1, '2025-06-20 20:31:45'),
+(8, 1, 'A request from Junior Engineer requires final approval.', 1, 1, '2025-06-20 20:31:45'),
+(9, 2, 'A request from Junior Engineer requires final approval.', 0, 1, '2025-06-20 20:31:45'),
+(10, 3, 'A request from Junior Engineer requires final approval.', 0, 1, '2025-06-20 20:31:45'),
+(11, 6, 'Your vacation request has received final approval.', 1, 1, '2025-06-20 20:31:55'),
+(12, 4, 'New vacation request from Junior Engineer.', 0, 5, '2025-06-20 21:47:28'),
+(13, 1, 'New request submitted by Junior Engineer, awaiting manager review.', 0, 5, '2025-06-20 21:47:28'),
+(14, 2, 'New request submitted by Junior Engineer, awaiting manager review.', 0, 5, '2025-06-20 21:47:28'),
+(15, 3, 'New request submitted by Junior Engineer, awaiting manager review.', 0, 5, '2025-06-20 21:47:28'),
+(16, 4, 'Leave request for Junior Engineer (#5) has been cancelled.', 0, 5, '2025-06-20 21:47:59'),
+(17, 4, 'New vacation request from Junior Engineer.', 0, 6, '2025-06-20 21:49:28'),
+(18, 1, 'New request submitted by Junior Engineer, awaiting manager review.', 0, 6, '2025-06-20 21:49:28'),
+(19, 2, 'New request submitted by Junior Engineer, awaiting manager review.', 0, 6, '2025-06-20 21:49:28'),
+(20, 3, 'New request submitted by Junior Engineer, awaiting manager review.', 0, 6, '2025-06-20 21:49:28'),
+(21, 2, 'Leave request for Junior Engineer (ID: 6) has been approved by their manager.', 0, 6, '2025-06-20 21:50:03'),
+(22, 6, 'Your leave request (#6) has been approved by your manager.', 0, 6, '2025-06-20 21:50:03');
+
 -- --------------------------------------------------------
 
 --
@@ -169,6 +275,11 @@ CREATE TABLE `request_attachments` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Truncate table before insert `request_attachments`
+--
+
+TRUNCATE TABLE `request_attachments`;
 -- --------------------------------------------------------
 
 --
@@ -183,6 +294,50 @@ CREATE TABLE `request_comments` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Truncate table before insert `request_comments`
+--
+
+TRUNCATE TABLE `request_comments`;
+--
+-- Dumping data for table `request_comments`
+--
+
+INSERT INTO `request_comments` (`id`, `request_id`, `user_id`, `comment`, `created_at`) VALUES
+(1, 4, 2, 'Project deadline during this period. Please reschedule.', '2025-06-21 12:00:00');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `shifts`
+--
+
+CREATE TABLE `shifts` (
+  `id` int(11) NOT NULL,
+  `shift_name` varchar(100) NOT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time NOT NULL,
+  `grace_period_in` int(11) DEFAULT 0 COMMENT 'Minutes allowed to be late',
+  `grace_period_out` int(11) DEFAULT 0 COMMENT 'Minutes allowed to leave early',
+  `break_start_time` time DEFAULT NULL,
+  `break_end_time` time DEFAULT NULL,
+  `is_night_shift` tinyint(1) DEFAULT 0 COMMENT 'TRUE if shift crosses midnight',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Truncate table before insert `shifts`
+--
+
+TRUNCATE TABLE `shifts`;
+--
+-- Dumping data for table `shifts`
+--
+
+INSERT INTO `shifts` (`id`, `shift_name`, `start_time`, `end_time`, `grace_period_in`, `grace_period_out`, `break_start_time`, `break_end_time`, `is_night_shift`, `created_at`, `updated_at`) VALUES
+(1, 'Fixed', '07:45:00', '15:45:00', 0, 0, NULL, NULL, 0, '2025-06-20 21:39:11', '2025-06-20 21:39:11');
+
 -- --------------------------------------------------------
 
 --
@@ -196,6 +351,7 @@ CREATE TABLE `users` (
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
   `role` enum('user','manager','hr','hr_manager','admin') NOT NULL DEFAULT 'user',
+  `shift_id` int(11) DEFAULT NULL,
   `department_id` int(11) DEFAULT NULL,
   `direct_manager_id` int(11) DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
@@ -203,6 +359,24 @@ CREATE TABLE `users` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Truncate table before insert `users`
+--
+
+TRUNCATE TABLE `users`;
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`id`, `employee_code`, `full_name`, `email`, `password`, `role`, `shift_id`, `department_id`, `direct_manager_id`, `is_active`, `must_change_password`, `created_at`, `updated_at`) VALUES
+(1, NULL, 'Joseph Ashraf', 'eptj0e@gmail.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'admin', NULL, NULL, NULL, 1, 0, '2025-06-20 20:30:35', '2025-06-20 20:30:44'),
+(2, 'HRM-001', 'HR Manager', 'hr.manager@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'hr_manager', NULL, 1, NULL, 1, 0, '2025-06-20 20:29:02', '2025-06-20 20:31:23'),
+(3, 'HR-001', 'HR Staff', 'hr.staff@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'hr', NULL, 1, 2, 1, 0, '2025-06-20 20:29:02', '2025-06-20 20:31:26'),
+(4, 'ENGM-001', 'Engineering Manager', 'eng.manager@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'manager', NULL, 2, NULL, 1, 0, '2025-06-20 20:29:02', '2025-06-20 20:31:28'),
+(5, 'ENG-001', 'Senior Engineer', 'senior.engineer@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'user', NULL, 2, 4, 1, 0, '2025-06-20 20:29:02', '2025-06-20 20:31:31'),
+(6, 'ENG-002', 'Junior Engineer', 'junior.engineer@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'user', NULL, 2, 4, 1, 0, '2025-06-20 20:29:02', '2025-06-20 20:31:33'),
+(7, 'MKT-001', 'Marketing Specialist', 'marketing@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'user', NULL, 3, NULL, 1, 1, '2025-06-20 20:29:02', '2025-06-20 20:31:35');
 
 -- --------------------------------------------------------
 
@@ -215,6 +389,7 @@ CREATE TABLE `vacation_requests` (
   `user_id` int(11) NOT NULL,
   `start_date` date NOT NULL,
   `end_date` date NOT NULL,
+  `duration_days` int(11) DEFAULT NULL,
   `reason` text DEFAULT NULL,
   `manager_id` int(11) DEFAULT NULL,
   `status` enum('pending_manager','pending_hr','approved','rejected','cancelled') NOT NULL DEFAULT 'pending_manager',
@@ -225,6 +400,23 @@ CREATE TABLE `vacation_requests` (
   `rejection_reason` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Truncate table before insert `vacation_requests`
+--
+
+TRUNCATE TABLE `vacation_requests`;
+--
+-- Dumping data for table `vacation_requests`
+--
+
+INSERT INTO `vacation_requests` (`id`, `user_id`, `start_date`, `end_date`, `duration_days`, `reason`, `manager_id`, `status`, `leave_type_id`, `manager_action_at`, `hr_id`, `hr_action_at`, `rejection_reason`, `created_at`) VALUES
+(1, 6, '2025-07-10', '2025-07-11', NULL, 'Family event.', 4, 'approved', 1, '2025-06-20 20:31:45', 1, '2025-06-20 20:31:55', NULL, '2025-06-21 07:00:00'),
+(2, 5, '2025-08-01', '2025-08-05', NULL, 'Short vacation.', 4, 'approved', 1, '2025-06-21 08:00:00', 6, '2025-06-20 20:30:11', NULL, '2025-06-20 06:30:00'),
+(3, 4, '2025-09-15', '2025-09-15', NULL, 'Personal day.', NULL, 'approved', 2, '2025-06-19 11:00:00', 2, '2025-06-20 13:00:00', NULL, '2025-06-19 09:00:00'),
+(4, 3, '2025-07-20', '2025-07-21', NULL, 'Conference.', 2, 'rejected', 1, '2025-06-21 12:00:00', NULL, NULL, 'Project deadline during this period. Please reschedule.', '2025-06-21 11:00:00'),
+(5, 6, '2025-06-28', '2025-06-28', NULL, 'XX', 4, 'cancelled', 1, NULL, NULL, NULL, NULL, '2025-06-20 21:47:28'),
+(6, 6, '2025-06-21', '2025-06-21', 1, 'Test', 4, 'pending_hr', 1, NULL, NULL, NULL, NULL, '2025-06-20 21:49:28');
 
 --
 -- Indexes for dumped tables
@@ -298,6 +490,13 @@ ALTER TABLE `request_comments`
   ADD KEY `user_id` (`user_id`);
 
 --
+-- Indexes for table `shifts`
+--
+ALTER TABLE `shifts`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `shift_name` (`shift_name`);
+
+--
 -- Indexes for table `users`
 --
 ALTER TABLE `users`
@@ -305,7 +504,8 @@ ALTER TABLE `users`
   ADD UNIQUE KEY `email` (`email`),
   ADD UNIQUE KEY `employee_code` (`employee_code`),
   ADD KEY `department_id` (`department_id`),
-  ADD KEY `direct_manager_id` (`direct_manager_id`);
+  ADD KEY `direct_manager_id` (`direct_manager_id`),
+  ADD KEY `fk_user_shift` (`shift_id`);
 
 --
 -- Indexes for table `vacation_requests`
@@ -315,7 +515,8 @@ ALTER TABLE `vacation_requests`
   ADD KEY `user_id` (`user_id`),
   ADD KEY `manager_id` (`manager_id`),
   ADD KEY `leave_type_id` (`leave_type_id`),
-  ADD KEY `idx_status` (`status`);
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `fk_request_hr` (`hr_id`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -325,19 +526,19 @@ ALTER TABLE `vacation_requests`
 -- AUTO_INCREMENT for table `attendance_logs`
 --
 ALTER TABLE `attendance_logs`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `departments`
 --
 ALTER TABLE `departments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `devices`
@@ -349,7 +550,7 @@ ALTER TABLE `devices`
 -- AUTO_INCREMENT for table `leave_balances`
 --
 ALTER TABLE `leave_balances`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `leave_types`
@@ -361,7 +562,7 @@ ALTER TABLE `leave_types`
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `request_attachments`
@@ -373,19 +574,25 @@ ALTER TABLE `request_attachments`
 -- AUTO_INCREMENT for table `request_comments`
 --
 ALTER TABLE `request_comments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `shifts`
+--
+ALTER TABLE `shifts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `vacation_requests`
 --
 ALTER TABLE `vacation_requests`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- Constraints for dumped tables
@@ -436,7 +643,8 @@ ALTER TABLE `request_comments`
 --
 ALTER TABLE `users`
   ADD CONSTRAINT `fk_user_department` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `fk_user_manager` FOREIGN KEY (`direct_manager_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `fk_user_manager` FOREIGN KEY (`direct_manager_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_user_shift` FOREIGN KEY (`shift_id`) REFERENCES `shifts` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Constraints for table `vacation_requests`

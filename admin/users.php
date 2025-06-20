@@ -15,10 +15,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user_id = $_POST['id'] ?? null;
     $full_name = trim($_POST['full_name']);
     $email = trim($_POST['email']);
-    $employee_code = trim($_POST['employee_code']); // Added
+    $employee_code = trim($_POST['employee_code']);
     $role = $_POST['role'];
     $department_id = !empty($_POST['department_id']) ? $_POST['department_id'] : null;
     $direct_manager_id = !empty($_POST['direct_manager_id']) ? $_POST['direct_manager_id'] : null;
+    $shift_id = !empty($_POST['shift_id']) ? $_POST['shift_id'] : null; // NEW: Get shift_id
     $password = $_POST['password'];
 
     // Basic Validation
@@ -28,8 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             if ($user_id) {
                 // UPDATE USER
-                $sql = "UPDATE users SET full_name = ?, email = ?, employee_code = ?, role = ?, department_id = ?, direct_manager_id = ? WHERE id = ?";
-                $params = [$full_name, $email, $employee_code, $role, $department_id, $direct_manager_id, $user_id];
+                $sql = "UPDATE users SET full_name = ?, email = ?, employee_code = ?, role = ?, department_id = ?, direct_manager_id = ?, shift_id = ? WHERE id = ?"; // NEW: Add shift_id to UPDATE
+                $params = [$full_name, $email, $employee_code, $role, $department_id, $direct_manager_id, $shift_id, $user_id];
                 $pdo->prepare($sql)->execute($params);
 
                 if (!empty($password)) {
@@ -37,13 +38,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->prepare("UPDATE users SET password = ?, must_change_password = 1 WHERE id = ?")->execute([$hashed_password, $user_id]);
                 }
                 $success = 'User updated successfully.';
+                log_audit_action($pdo, 'update_user', json_encode(['user_id' => $user_id, 'email' => $email]), get_current_user_id());
             } else {
                 // CREATE USER
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                $sql = "INSERT INTO users (full_name, email, employee_code, password, role, department_id, direct_manager_id, must_change_password) VALUES (?, ?, ?, ?, ?, ?, ?, 1)";
-                $params = [$full_name, $email, $employee_code, $hashed_password, $role, $department_id, $direct_manager_id];
+                $sql = "INSERT INTO users (full_name, email, employee_code, password, role, department_id, direct_manager_id, shift_id, must_change_password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)"; // NEW: Add shift_id to INSERT
+                $params = [$full_name, $email, $employee_code, $hashed_password, $role, $department_id, $direct_manager_id, $shift_id];
                 $pdo->prepare($sql)->execute($params);
                 $success = 'User created successfully.';
+                log_audit_action($pdo, 'add_user', json_encode(['email' => $email]), get_current_user_id());
             }
             // Use JS to redirect to clear POST data
             echo "<script>window.location.href = 'users.php?success=" . urlencode($success) . "';</script>";
@@ -54,6 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $error = 'Database error: ' . $e->getMessage();
             }
+            error_log("User management error: " . $e->getMessage());
         }
     }
 }
@@ -68,7 +72,9 @@ if (isset($_GET['action']) && ($_GET['action'] === 'edit' && isset($_GET['id']))
 $departments = $pdo->query("SELECT id, name FROM departments ORDER BY name")->fetchAll();
 $managers = $pdo->query("SELECT id, full_name FROM users WHERE role IN ('manager', 'admin', 'hr_manager') ORDER BY full_name")->fetchAll();
 $roles = ['user', 'manager', 'hr', 'hr_manager', 'admin'];
-$users_list = $pdo->query("SELECT u.*, d.name AS department_name, m.full_name AS manager_name FROM users u LEFT JOIN departments d ON u.department_id = d.id LEFT JOIN users m ON u.direct_manager_id = m.id ORDER BY u.full_name")->fetchAll();
+$shifts = $pdo->query("SELECT id, shift_name FROM shifts ORDER BY shift_name")->fetchAll(); // NEW: Fetch shifts
+
+$users_list = $pdo->query("SELECT u.*, d.name AS department_name, m.full_name AS manager_name, s.shift_name FROM users u LEFT JOIN departments d ON u.department_id = d.id LEFT JOIN users m ON u.direct_manager_id = m.id LEFT JOIN shifts s ON u.shift_id = s.id ORDER BY u.full_name")->fetchAll(); // NEW: Join shifts table
 
 if(isset($_GET['success'])) $success = $_GET['success'];
 ?>
@@ -89,7 +95,7 @@ if(isset($_GET['success'])) $success = $_GET['success'];
     <div class="card-header"><h2 class="h5 mb-0"><?= $editing_user ? 'Edit User' : 'Add New User'; ?></h2></div>
     <div class="card-body">
         <form action="users.php" method="post">
-            <input type="hidden" name="id" value="<?= $editing_user['id'] ?? '' ?>">
+            <input type="hidden" name="id" value="<?= htmlspecialchars($editing_user['id'] ?? '') ?>">
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="full_name" class="form-label">Full Name</label>
@@ -112,7 +118,7 @@ if(isset($_GET['success'])) $success = $_GET['success'];
                     <label for="role" class="form-label">Role</label>
                     <select class="form-select" name="role" required>
                         <?php foreach ($roles as $r): ?>
-                            <option value="<?= $r ?>" <?= (isset($editing_user['role']) && $editing_user['role'] === $r) ? 'selected' : '' ?>><?= ucfirst($r) ?></option>
+                            <option value="<?= htmlspecialchars($r) ?>" <?= (isset($editing_user['role']) && $editing_user['role'] === $r) ? 'selected' : '' ?>><?= ucfirst(htmlspecialchars($r)) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -121,7 +127,7 @@ if(isset($_GET['success'])) $success = $_GET['success'];
                     <select class="form-select" name="department_id">
                         <option value="">-- None --</option>
                         <?php foreach ($departments as $dept): ?>
-                            <option value="<?= $dept['id'] ?>" <?= (isset($editing_user['department_id']) && $editing_user['department_id'] == $dept['id']) ? 'selected' : '' ?>><?= htmlspecialchars($dept['name']) ?></option>
+                            <option value="<?= htmlspecialchars($dept['id']) ?>" <?= (isset($editing_user['department_id']) && $editing_user['department_id'] == $dept['id']) ? 'selected' : '' ?>><?= htmlspecialchars($dept['name']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -131,7 +137,16 @@ if(isset($_GET['success'])) $success = $_GET['success'];
                         <option value="">-- None --</option>
                         <?php foreach ($managers as $manager): ?>
                             <?php if(isset($editing_user['id']) && $editing_user['id'] == $manager['id']) continue; ?>
-                            <option value="<?= $manager['id'] ?>" <?= (isset($editing_user['direct_manager_id']) && $editing_user['direct_manager_id'] == $manager['id']) ? 'selected' : '' ?>><?= htmlspecialchars($manager['full_name']) ?></option>
+                            <option value="<?= htmlspecialchars($manager['id']) ?>" <?= (isset($editing_user['direct_manager_id']) && $editing_user['direct_manager_id'] == $manager['id']) ? 'selected' : '' ?>><?= htmlspecialchars($manager['full_name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="shift_id" class="form-label">Assigned Shift</label>
+                    <select class="form-select" name="shift_id">
+                        <option value="">-- None --</option>
+                        <?php foreach ($shifts as $shift): // NEW: Populate shifts dropdown ?>
+                            <option value="<?= htmlspecialchars($shift['id']) ?>" <?= (isset($editing_user['shift_id']) && $editing_user['shift_id'] == $shift['id']) ? 'selected' : '' ?>><?= htmlspecialchars($shift['shift_name']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -151,8 +166,7 @@ if(isset($_GET['success'])) $success = $_GET['success'];
         <div class="table-responsive">
             <table class="table table-striped table-hover">
                 <thead class="table-light">
-                    <tr><th>Full Name</th><th>Employee Code</th><th>Email</th><th>Role</th><th>Department</th><th>Manager</th><th class="text-end">Actions</th></tr>
-                </thead>
+                    <tr><th>Full Name</th><th>Employee Code</th><th>Email</th><th>Role</th><th>Department</th><th>Manager</th><th>Shift</th><th class="text-end">Actions</th></tr> </thead>
                 <tbody>
                     <?php foreach ($users_list as $user): ?>
                         <tr>
@@ -162,7 +176,7 @@ if(isset($_GET['success'])) $success = $_GET['success'];
                             <td><?= ucfirst(htmlspecialchars($user['role'])) ?></td>
                             <td><?= htmlspecialchars($user['department_name'] ?? 'N/A') ?></td>
                             <td><?= htmlspecialchars($user['manager_name'] ?? 'N/A') ?></td>
-                            <td class="text-end"><a href="?action=edit&id=<?= $user['id'] ?>#user-form" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-fill"></i> Edit</a></td>
+                            <td><?= htmlspecialchars($user['shift_name'] ?? 'N/A') ?></td> <td class="text-end"><a href="?action=edit&id=<?= htmlspecialchars($user['id']) ?>#user-form" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-fill"></i> Edit</a></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

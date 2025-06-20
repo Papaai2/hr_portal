@@ -55,7 +55,20 @@ require_once __DIR__ . '/../core/config.php';
                     <?php endif; ?>
                     
                     <?php if (in_array($_SESSION['role'], ['hr_manager', 'admin'])): ?>
-                        <li class="nav-item"><a class="nav-link" href="/admin/index.php">Admin Panel</a></li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="admin-dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Admin Panel
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="admin-dropdown">
+                                <li><a class="dropdown-item" href="/admin/index.php">Dashboard</a></li>
+                                <li><a class="dropdown-item" href="/admin/users.php">Users</a></li>
+                                <li><a class="dropdown-item" href="/admin/departments.php">Departments</a></li>
+                                <li><a class="dropdown-item" href="/admin/devices.php">Devices</a></li>
+                                <li><a class="dropdown-item" href="/admin/leave_management.php">Leave Management</a></li>
+                                <li><a class="dropdown-item" href="/admin/attendance_violations.php">Attendance Violations</a></li>
+                                <li><a class="dropdown-item" href="/admin/attendance_logs.php">Attendance Logs</a></li>
+                                <li><a class="dropdown-item" href="/admin/shifts.php">Shift Management</a></li> </ul>
+                        </li>
                     <?php endif; ?>
                 <?php endif; ?>
             </ul>

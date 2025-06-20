@@ -1,223 +1,316 @@
 <?php
-// in file: htdocs/requests/view.php
+// in file: requests/view.php
 
-require_once __DIR__ . '/../app/core/auth.php';
-require_once __DIR__ . '/../app/core/database.php';
-require_once __DIR__ . '/../app/core/helpers.php';
+require_once __DIR__ . '/../app/bootstrap.php';
+require_once __DIR__ . '/../app/core/helpers.php'; // Ensure helpers are included for getStatusBadgeClass
 
-require_login();
-
-$request_id = $_GET['id'] ?? null;
-if (!$request_id) { header('Location: /index.php'); exit(); }
+$request_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+if (!$request_id) {
+    header('Location: /requests/index.php');
+    exit();
+}
 
 $current_user_id = get_current_user_id();
 $current_user_role = get_current_user_role();
-$error = '';
-$success = '';
 
+// Fetch request details
+$sql = "
+    SELECT
+        r.*,
+        u.full_name AS user_name,
+        u.email AS user_email,
+        u.employee_code AS user_employee_code,
+        m.full_name AS manager_name,
+        lt.name AS leave_type_name
+    FROM
+        vacation_requests r
+    JOIN
+        users u ON r.user_id = u.id
+    LEFT JOIN
+        users m ON r.manager_id = m.id
+    LEFT JOIN
+        leave_types lt ON r.leave_type_id = lt.id
+    WHERE
+        r.id = ?
+";
+$stmt = $pdo->prepare($sql);
+$stmt->execute([$request_id]);
+$request = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$request) {
+    // Request not found
+    http_response_code(404);
+    echo "<h1>404 Not Found</h1>";
+    echo "The request you are looking for does not exist.";
+    exit();
+}
+
+// Authorization check: Only owner, manager, HR, HR Manager, or Admin can view
+if ($request['user_id'] !== $current_user_id && $request['manager_id'] !== $current_user_id &&
+    !in_array($current_user_role, ['hr', 'hr_manager', 'admin'])) {
+    http_response_code(403);
+    echo "<h1>403 Forbidden</h1>";
+    echo "You do not have permission to view this request.";
+    exit();
+}
+
+// Handle request actions (approve, reject, cancel)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    
-    $stmt = $pdo->prepare("SELECT r.*, u.full_name, m.full_name as manager_name FROM vacation_requests r JOIN users u ON r.user_id = u.id LEFT JOIN users m ON r.manager_id = m.id WHERE r.id = ?");
-    $stmt->execute([$request_id]);
-    $request = $stmt->fetch();
+    $comment_text = sanitize_input($_POST['comment'] ?? '');
 
-    if ($request) {
-        $can_manage = ($current_user_id == $request['manager_id']);
-        $can_hr_approve = in_array($current_user_role, ['hr', 'admin', 'hr_manager']);
+    $new_status = $request['status']; // Default to current status
 
-        try {
-            if ($action == 'approve_manager' && $can_manage && $request['status'] == 'pending_manager') {
-                $sql = "UPDATE vacation_requests SET status = 'pending_hr', manager_action_at = NOW() WHERE id = ?";
-                $pdo->prepare($sql)->execute([$request_id]);
-                create_notification($pdo, $request['user_id'], "Your request was approved by your manager and sent to HR.", $request_id);
-                $hr_users = $pdo->query("SELECT id FROM users WHERE role IN ('hr', 'admin', 'hr_manager')")->fetchAll();
-                foreach ($hr_users as $hr_user) {
-                    create_notification($pdo, $hr_user['id'], "A request from {$request['full_name']} requires final approval.", $request_id);
+    try {
+        $pdo->beginTransaction();
+
+        switch ($action) {
+            case 'approve_manager':
+                if ($request['status'] === 'pending_manager' && ($current_user_role === 'manager' || $current_user_role === 'hr_manager' || $current_user_role === 'admin')) {
+                    $new_status = 'pending_hr';
+                    $message_to_hr = "Leave request for " . $request['user_name'] . " (ID: {$request['user_id']}) has been approved by their manager.";
+                    create_notification($pdo, get_hr_user_id($pdo), $message_to_hr, $request_id);
+                    create_notification($pdo, $request['user_id'], "Your leave request (#{$request_id}) has been approved by your manager.", $request_id);
+                    log_audit_action($pdo, 'approve_request_manager', json_encode(['request_id' => $request_id, 'status' => $new_status]), $current_user_id);
                 }
-                $success = 'Request approved and forwarded to HR.';
+                break;
 
-            } elseif ($action == 'approve_hr' && $can_hr_approve && $request['status'] == 'pending_hr') {
-                $pdo->beginTransaction(); 
+            case 'approve_hr':
+                if ($request['status'] === 'pending_hr' && in_array($current_user_role, ['hr', 'hr_manager', 'admin'])) {
+                    $new_status = 'approved';
+                    // Deduct leave balance
+                    $stmt_balance = $pdo->prepare("UPDATE leave_balances SET balance_days = balance_days - ?, last_updated_at = NOW() WHERE user_id = ? AND leave_type_id = ?");
+                    $stmt_balance->execute([$request['duration_days'], $request['user_id'], $request['leave_type_id']]);
+                    
+                    create_notification($pdo, $request['user_id'], "Your leave request (#{$request_id}) has been fully approved by HR.", $request_id);
+                    create_notification($pdo, $request['manager_id'], "Leave request for " . $request['user_name'] . " (#{$request_id}) has been fully approved by HR.", $request_id);
+                    log_audit_action($pdo, 'approve_request_hr', json_encode(['request_id' => $request_id, 'status' => $new_status]), $current_user_id);
+                }
+                break;
 
-                $sql = "UPDATE vacation_requests SET status = 'approved', hr_id = ?, hr_action_at = NOW() WHERE id = ?";
-                $pdo->prepare($sql)->execute([$current_user_id, $request_id]);
-                
-                $start = new DateTime($request['start_date']);
-                $end = new DateTime($request['end_date']);
-                $days_requested = $start->diff($end)->days + 1;
-
-                $update_balance_sql = "UPDATE leave_balances SET balance_days = balance_days - ?, last_updated_at = NOW() WHERE user_id = ? AND leave_type_id = ?";
-                $stmt_deduct = $pdo->prepare($update_balance_sql);
-                $stmt_deduct->execute([$days_requested, $request['user_id'], $request['leave_type_id']]);
-
-                create_notification($pdo, $request['user_id'], "Your vacation request has received final approval.", $request_id);
-                $success = 'Request has been given final approval.';
-                
-                $pdo->commit();
-            } elseif ($action == 'reject') {
-                $rejection_reason = trim($_POST['rejection_reason']);
-                if (empty($rejection_reason)) {
-                    $error = 'A reason is required to reject a request.';
-                } else {
-                    if (($can_manage && $request['status'] == 'pending_manager') || ($can_hr_approve && $request['status'] == 'pending_hr')) {
-                        $sql = "UPDATE vacation_requests SET status = 'rejected', rejection_reason = ?, hr_id = ?, manager_action_at = NOW(), hr_action_at = NOW() WHERE id = ?";
-                        $pdo->prepare($sql)->execute([$rejection_reason, $current_user_id, $request_id]);
-                        
-                        create_notification($pdo, $request['user_id'], "Your vacation request has been rejected.", $request_id);
-
-                        $hr_users = $pdo->query("SELECT id FROM users WHERE role IN ('hr', 'admin', 'hr_manager')")->fetchAll();
-                        $rejecter_name = ($request['status'] == 'pending_manager') ? $request['manager_name'] : $_SESSION['full_name'];
-                        foreach ($hr_users as $hr_user) {
-                            create_notification($pdo, $hr_user['id'], "A request from {$request['full_name']} was rejected by {$rejecter_name}.", $request_id);
-                        }
-                        
-                        $success = 'Request has been rejected.';
-                    } else {
-                        $error = 'Permission denied to reject this request.';
+            case 'reject':
+                if (in_array($request['status'], ['pending_manager', 'pending_hr']) && in_array($current_user_role, ['manager', 'hr', 'hr_manager', 'admin'])) {
+                    $new_status = 'rejected';
+                    create_notification($pdo, $request['user_id'], "Your leave request (#{$request_id}) has been rejected.", $request_id);
+                     // If manager rejects, notify HR too (if it was already pending HR, or if HR is higher than manager)
+                    if ($request['status'] === 'pending_hr' || in_array($current_user_role, ['hr', 'hr_manager', 'admin'])) {
+                        create_notification($pdo, get_hr_user_id($pdo), "Leave request for " . $request['user_name'] . " (#{$request_id}) has been rejected.", $request_id);
                     }
-                }
-            } elseif ($action == 'add_comment') {
-                $comment = trim($_POST['comment']);
-                if (!empty($comment)) {
-                    $sql = "INSERT INTO request_comments (request_id, user_id, comment) VALUES (?, ?, ?)";
-                    $pdo->prepare($sql)->execute([$request_id, $current_user_id, $comment]);
-                    $commenter_name = $_SESSION['full_name'];
-                    if ($current_user_id == $request['user_id']) {
-                        create_notification($pdo, $request['manager_id'], "$commenter_name commented on a request.", $request_id);
-                    } else {
-                        create_notification($pdo, $request['user_id'], "$commenter_name commented on your request.", $request_id);
+                    if ($request['status'] === 'pending_manager' && $request['manager_id'] !== $current_user_id) { // If HR/Admin rejects at manager stage
+                        create_notification($pdo, $request['manager_id'], "Leave request for " . $request['user_name'] . " (#{$request_id}) was rejected by an admin/HR.", $request_id);
                     }
-                    $success = 'Comment added.';
+                    log_audit_action($pdo, 'reject_request', json_encode(['request_id' => $request_id, 'status' => $new_status]), $current_user_id);
                 }
-            } else {
-                 $error = "Invalid action or permission denied.";
-            }
+                break;
 
-            if ($success && !$error) {
-                header("Location: view.php?id=$request_id&success=" . urlencode($success));
-                exit();
-            }
-
-        } catch (PDOException $e) { 
-            $pdo->rollBack();
-            $error = "Database error: " . $e->getMessage(); 
+            case 'cancel':
+                // Only the user or HR/Admin can cancel if not yet approved
+                if (($request['user_id'] === $current_user_id || in_array($current_user_role, ['hr', 'hr_manager', 'admin'])) && $request['status'] !== 'approved' && $request['status'] !== 'rejected') {
+                    $new_status = 'cancelled';
+                    // Notify manager and HR if applicable
+                    if ($request['manager_id']) {
+                         create_notification($pdo, $request['manager_id'], "Leave request for " . $request['user_name'] . " (#{$request_id}) has been cancelled.", $request_id);
+                    }
+                    if (in_array($request['status'], ['pending_hr', 'approved'])) { // If it reached HR or was approved
+                        create_notification($pdo, get_hr_user_id($pdo), "Leave request for " . $request['user_name'] . " (#{$request_id}) has been cancelled.", $request_id);
+                    }
+                    log_audit_action($pdo, 'cancel_request', json_encode(['request_id' => $request_id, 'status' => $new_status]), $current_user_id);
+                } else if ($request['user_id'] === $current_user_id && $request['status'] === 'approved') {
+                    // If user cancels an approved request, it needs HR attention to revert balance
+                    $new_status = 'pending_cancellation_hr';
+                    create_notification($pdo, get_hr_user_id($pdo), "Leave request for " . $request['user_name'] . " (#{$request_id}) (approved) has been requested for cancellation.", $request_id);
+                    create_notification($pdo, $request['user_id'], "Your approved leave request (#{$request_id}) cancellation is pending HR review.", $request_id);
+                    log_audit_action($pdo, 'request_cancel_approved', json_encode(['request_id' => $request_id, 'status' => $new_status]), $current_user_id);
+                }
+                break;
+            
+            // NEW ACTION: HR/Admin can revert approved cancellation
+            case 'revert_approved_cancellation':
+                if ($request['status'] === 'pending_cancellation_hr' && in_array($current_user_role, ['hr', 'hr_manager', 'admin'])) {
+                    $new_status = 'cancelled'; // Set final status to cancelled
+                    // Revert leave balance if it was deducted
+                    $stmt_balance = $pdo->prepare("UPDATE leave_balances SET balance_days = balance_days + ?, last_updated_at = NOW() WHERE user_id = ? AND leave_type_id = ?");
+                    $stmt_balance->execute([$request['duration_days'], $request['user_id'], $request['leave_type_id']]);
+                    
+                    create_notification($pdo, $request['user_id'], "Your approved leave request (#{$request_id}) has been successfully cancelled by HR and balance reverted.", $request_id);
+                    create_notification($pdo, $request['manager_id'], "Leave request for " . $request['user_name'] . " (#{$request_id}) has been cancelled by HR and balance reverted.", $request_id);
+                    log_audit_action($pdo, 'revert_approved_cancel', json_encode(['request_id' => $request_id, 'status' => $new_status]), $current_user_id);
+                }
+                break;
+            
+            case 'add_comment':
+                if (!empty($comment_text)) {
+                    $stmt_comment = $pdo->prepare("INSERT INTO request_comments (request_id, user_id, comment_text) VALUES (?, ?, ?)");
+                    $stmt_comment->execute([$request_id, $current_user_id, $comment_text]);
+                    
+                    // Notify involved parties
+                    if ($current_user_id !== $request['user_id']) create_notification($pdo, $request['user_id'], "A comment was added to your request (#{$request_id}).", $request_id);
+                    if ($current_user_id !== $request['manager_id'] && $request['manager_id']) create_notification($pdo, $request['manager_id'], "A comment was added to a team request (#{$request_id}) for " . $request['user_name'] . ".", $request_id);
+                    if (!in_array($current_user_role, ['hr', 'hr_manager', 'admin'])) { // If commenter is not HR/Admin, notify HR
+                         create_notification($pdo, get_hr_user_id($pdo), "A comment was added to request (#{$request_id}) for " . $request['user_name'] . ".", $request_id);
+                    }
+                    log_audit_action($pdo, 'add_request_comment', json_encode(['request_id' => $request_id, 'comment' => $comment_text]), $current_user_id);
+                }
+                break;
         }
+
+        // Update request status if changed
+        if ($new_status !== $request['status']) {
+            $stmt_update_status = $pdo->prepare("UPDATE vacation_requests SET status = ? WHERE id = ?");
+            $stmt_update_status->execute([$new_status, $request_id]);
+            $request['status'] = $new_status; // Update local request object
+        }
+        $pdo->commit();
+        header("Location: view.php?id={$request_id}&success=Action completed successfully.");
+        exit();
+
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $error_message = "Error: " . $e->getMessage();
+        error_log("Error processing request action: " . $e->getMessage());
     }
 }
 
-$stmt = $pdo->prepare("
-    SELECT r.*, u.full_name, u.email, d.name AS department_name, lt.name AS leave_type_name
-    FROM vacation_requests r
-    JOIN users u ON r.user_id = u.id
-    LEFT JOIN departments d ON u.department_id = d.id
-    LEFT JOIN leave_types lt ON r.leave_type_id = lt.id
-    WHERE r.id = ?
+// Fetch comments for this request
+$stmt_comments = $pdo->prepare("
+    SELECT rc.*, u.full_name AS commenter_name, u.role AS commenter_role
+    FROM request_comments rc
+    JOIN users u ON rc.user_id = u.id
+    WHERE rc.request_id = ?
+    ORDER BY rc.created_at ASC
 ");
-$stmt->execute([$request_id]);
-$request = $stmt->fetch();
+$stmt_comments->execute([$request_id]);
+$comments = $stmt_comments->fetchAll(PDO::FETCH_ASSOC);
 
-if (!$request) { http_response_code(404); exit("Request not found."); }
+// Helper to get HR user ID for notifications
+function get_hr_user_id(PDO $pdo) {
+    $stmt = $pdo->query("SELECT id FROM users WHERE role IN ('hr', 'hr_manager') LIMIT 1");
+    return $stmt->fetchColumn();
+}
 
-$is_owner = ($current_user_id == $request['user_id']);
-$is_manager = ($current_user_id == $request['manager_id']);
-$is_hr_or_admin = in_array($current_user_role, ['hr', 'admin', 'hr_manager']);
 
-if (!$is_owner && !$is_manager && !$is_hr_or_admin) { http_response_code(403); exit("Access Denied."); }
-
-$attachments = $pdo->prepare("SELECT * FROM request_attachments WHERE request_id = ?");
-$attachments->execute([$request_id]);
-$attachments = $attachments->fetchAll();
-
-$comments = $pdo->prepare("
-    SELECT c.*, u.full_name, u.role 
-    FROM request_comments c 
-    JOIN users u ON c.user_id = u.id 
-    WHERE c.request_id = ? ORDER BY c.created_at ASC
-");
-$comments->execute([$request_id]);
-$comments = $comments->fetchAll();
-
-// The getStatusBadgeClass() and getStatusText() functions were removed from here.
-
-if (isset($_GET['success'])) $success = htmlspecialchars($_GET['success']);
-
-$page_title = 'View Request Details';
+$page_title = 'View Request #' . $request['id'];
 include __DIR__ . '/../app/templates/header.php';
 ?>
-<div class="row g-4">
-    <div class="col-lg-7">
-        <div class="card shadow-sm">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h1 class="h4 mb-0">Request Details</h1>
-                <span class="badge rounded-pill fs-6 <?= getStatusBadgeClass($request['status']) ?>"><?= getStatusText($request['status']) ?></span>
-            </div>
-            <div class="card-body">
-                <?php if ($success): ?><div class="alert alert-success"><?= $success ?></div><?php endif; ?>
-                <?php if ($error): ?><div class="alert alert-danger"><?= $error ?></div><?php endif; ?>
-                <dl class="row">
-                    <dt class="col-sm-4">Employee:</dt><dd class="col-sm-8"><?php echo htmlspecialchars($request['full_name']); ?></dd>
-                    <dt class="col-sm-4">Department:</dt><dd class="col-sm-8"><?php echo htmlspecialchars($request['department_name'] ?? 'N/A'); ?></dd>
-                    <dt class="col-sm-4">Leave Type:</dt><dd class="col-sm-8"><?php echo htmlspecialchars($request['leave_type_name'] ?? 'N/A'); ?></dd>
-                    <dt class="col-sm-4">Dates:</dt><dd class="col-sm-8"><?php echo date('F j, Y', strtotime($request['start_date'])); ?> to <?php echo date('F j, Y', strtotime($request['end_date'])); ?></dd>
-                    <dt class="col-sm-4">Reason:</dt><dd class="col-sm-8"><p><?php echo nl2br(htmlspecialchars($request['reason'])); ?></p></dd>
-                    <?php if ($request['status'] === 'rejected' && !empty($request['rejection_reason'])): ?>
-                        <dt class="col-sm-4 text-danger">Rejection Reason:</dt><dd class="col-sm-8 text-danger"><?php echo htmlspecialchars($request['rejection_reason']); ?></dd>
-                    <?php endif; ?>
-                    <?php if (!empty($attachments)): ?>
-                        <dt class="col-sm-4">Attachments:</dt>
-                        <dd class="col-sm-8"><ul class="list-unstyled mb-0">
-                            <?php foreach ($attachments as $file): ?>
-                                <li><a href="/download.php?id=<?php echo $file['id']; ?>"><i class="bi bi-paperclip"></i> <?php echo htmlspecialchars($file['file_name']); ?></a></li>
-                            <?php endforeach; ?></ul></dd>
-                    <?php endif; ?>
-                </dl>
-                <div class="mt-4 pt-3 border-top">
-                    <?php if ($is_manager && $request['status'] == 'pending_manager'): ?>
-                    <div class="alert alert-info"><strong>Action Required:</strong> Please review and act on this request.<div class="mt-2">
-                             <form action="" method="post" class="d-inline"><input type="hidden" name="action" value="approve_manager"><button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i>Approve & Send to HR</button></form>
-                            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal"><i class="bi bi-x-lg me-1"></i>Reject</button></div></div>
-                    <?php endif; ?>
-                    <?php if ($is_hr_or_admin && $request['status'] == 'pending_hr'): ?>
-                    <div class="alert alert-info"><strong>Final Approval Required:</strong> This request has been approved by the manager.<div class="mt-2">
-                            <form action="" method="post" class="d-inline"><input type="hidden" name="action" value="approve_hr"><button type="submit" class="btn btn-success"><i class="bi bi-check-circle-fill me-1"></i>Final Approve</button></form>
-                            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal"><i class="bi bi-x-lg me-1"></i>Reject</button></div></div>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Leave Request #<?= htmlspecialchars($request['id']) ?></h1>
+    <span class="badge rounded-pill <?= getStatusBadgeClass($request['status']) ?> fs-5">
+        <?= getStatusText($request['status']) ?>
+    </span>
+</div>
+
+<?php if (isset($_GET['success'])): ?><div class="alert alert-success"><?= htmlspecialchars($_GET['success']) ?></div><?php endif; ?>
+<?php if (isset($error_message) && $error_message): ?><div class="alert alert-danger"><?= htmlspecialchars($error_message) ?></div><?php endif; ?>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Request Details</h5>
     </div>
-    <div class="col-lg-5">
-        <div class="card shadow-sm">
-            <div class="card-header"><h2 class="h5 mb-0"><i class="bi bi-chat-dots-fill me-2"></i>Communication Log</h2></div>
-            <div class="card-body">
-                <div class="mb-3" style="max-height: 400px; overflow-y: auto;">
-                    <?php if (empty($comments)): ?>
-                        <p class="text-muted">No comments yet.</p>
-                    <?php else: ?>
-                        <?php foreach ($comments as $comment): ?>
-                            <div class="d-flex mb-3">
-                                <div class="flex-shrink-0"><i class="bi bi-person-circle fs-3 text-muted"></i></div>
-                                <div class="flex-grow-1 ms-3">
-                                    <div class="fw-bold"><?php echo htmlspecialchars($comment['full_name']); ?> <small class="text-muted">(<?= ucfirst($comment['role']) ?>)</small></div>
-                                    <p class="mb-1 bg-light p-2 rounded"><?php echo nl2br(htmlspecialchars($comment['comment'])); ?></p>
-                                    <small class="text-muted"><?php echo date('M j, Y, g:i a', strtotime($comment['created_at'])); ?></small>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div><hr>
-                <form action="" method="post">
-                    <input type="hidden" name="action" value="add_comment">
-                    <div class="mb-3">
-                        <label for="comment" class="form-label fw-bold">Add a Comment</label>
-                        <textarea class="form-control" name="comment" rows="3" placeholder="Type your message here..." required></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-secondary w-100"><i class="bi bi-send me-1"></i>Post Comment</button>
-                </form>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <strong>Employee:</strong> <?= htmlspecialchars($request['user_name']) ?> (ID: <?= htmlspecialchars($request['user_id']) ?>, Code: <?= htmlspecialchars($request['user_employee_code'] ?? 'N/A') ?>)
             </div>
+            <div class="col-md-6 mb-3">
+                <strong>Employee Email:</strong> <?= htmlspecialchars($request['user_email']) ?>
+            </div>
+            <div class="col-md-6 mb-3">
+                <strong>Leave Type:</strong> <?= htmlspecialchars($request['leave_type_name'] ?? 'N/A') ?>
+            </div>
+            <div class="col-md-6 mb-3">
+                <strong>Manager:</strong> <?= htmlspecialchars($request['manager_name'] ?? 'N/A') ?>
+            </div>
+            <div class="col-md-6 mb-3">
+                <strong>Start Date:</strong> <?= date('M d, Y', strtotime($request['start_date'])) ?>
+            </div>
+            <div class="col-md-6 mb-3">
+                <strong>End Date:</strong> <?= date('M d, Y', strtotime($request['end_date'])) ?>
+            </div>
+            <div class="col-md-6 mb-3">
+                <strong>Duration:</strong> <?= htmlspecialchars($request['duration_days'] ?? '') ?> days
+            </div>
+            <div class="col-md-6 mb-3">
+                <strong>Requested On:</strong> <?= date('M d, Y H:i A', strtotime($request['created_at'])) ?>
+            </div>
+            <div class="col-12 mb-3">
+                <strong>Reason:</strong><br>
+                <p class="card-text border p-2 rounded bg-light"><?= nl2br(htmlspecialchars($request['reason'])) ?></p>
+            </div>
+            <?php if (!empty($request['attachment_path'])): ?>
+            <div class="col-12 mb-3">
+                <strong>Attachment:</strong> <a href="/download.php?file=<?= urlencode($request['attachment_path']) ?>" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-download me-1"></i> Download Attachment</a>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
-<div class="modal fade" id="rejectModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form action="" method="post"><div class="modal-header"><h5 class="modal-title" id="rejectModalLabel">Reject Request</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><input type="hidden" name="action" value="reject"><div class="mb-3"><label for="rejection_reason" class="form-label"><strong>Reason for Rejection (Required)</strong></label><textarea class="form-control" id="rejection_reason" name="rejection_reason" rows="4" required></textarea></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-danger">Confirm Rejection</button></div></form></div></div></div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Actions</h5>
+    </div>
+    <div class="card-body">
+        <form action="view.php?id=<?= htmlspecialchars($request['id']) ?>" method="POST">
+            <div class="d-flex flex-wrap gap-2">
+                <?php if ($request['status'] === 'pending_manager' && ($request['manager_id'] === $current_user_id || in_array($current_user_role, ['hr_manager', 'admin']))): ?>
+                    <button type="submit" name="action" value="approve_manager" class="btn btn-success"><i class="bi bi-check-circle me-2"></i>Approve (Manager)</button>
+                <?php endif; ?>
+
+                <?php if ($request['status'] === 'pending_hr' && in_array($current_user_role, ['hr', 'hr_manager', 'admin'])): ?>
+                    <button type="submit" name="action" value="approve_hr" class="btn btn-success"><i class="bi bi-check-circle me-2"></i>Approve (HR)</button>
+                <?php endif; ?>
+
+                <?php if (in_array($request['status'], ['pending_manager', 'pending_hr']) && in_array($current_user_role, ['manager', 'hr', 'hr_manager', 'admin'])): ?>
+                    <button type="submit" name="action" value="reject" class="btn btn-danger" onclick="return confirm('Are you sure you want to reject this request?');"><i class="bi bi-x-circle me-2"></i>Reject</button>
+                <?php endif; ?>
+                
+                <?php if (($request['user_id'] === $current_user_id || in_array($current_user_role, ['hr', 'hr_manager', 'admin'])) && $request['status'] !== 'approved' && $request['status'] !== 'rejected' && $request['status'] !== 'cancelled' && $request['status'] !== 'pending_cancellation_hr'): ?>
+                    <button type="submit" name="action" value="cancel" class="btn btn-secondary" onclick="return confirm('Are you sure you want to cancel this request?');"><i class="bi bi-slash-circle me-2"></i>Cancel Request</button>
+                <?php endif; ?>
+
+                <?php if ($request['user_id'] === $current_user_id && $request['status'] === 'approved'): ?>
+                    <button type="submit" name="action" value="cancel" class="btn btn-secondary" onclick="return confirm('This request is already approved. Are you sure you want to request cancellation? HR will need to approve this cancellation to revert leave balance.');"><i class="bi bi-slash-circle me-2"></i>Request Cancellation</button>
+                <?php endif; ?>
+
+                <?php if ($request['status'] === 'pending_cancellation_hr' && in_array($current_user_role, ['hr', 'hr_manager', 'admin'])): ?>
+                    <button type="submit" name="action" value="revert_approved_cancellation" class="btn btn-success" onclick="return confirm('Are you sure you want to finalize this cancellation and revert the leave balance?');"><i class="bi bi-arrow-counterclockwise me-2"></i>Confirm Cancellation & Revert Balance</button>
+                <?php endif; ?>
+
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Comments</h5>
+    </div>
+    <div class="card-body">
+        <?php if (empty($comments)): ?>
+            <p class="text-muted">No comments yet.</p>
+        <?php else: ?>
+            <ul class="list-group list-group-flush mb-3">
+                <?php foreach ($comments as $comment): ?>
+                    <li class="list-group-item">
+                        <small class="text-muted d-block">
+                            <strong><?= htmlspecialchars($comment['commenter_name']) ?> (<?= htmlspecialchars(ucfirst($comment['commenter_role'])) ?>)</strong> on <?= date('M d, Y H:i A', strtotime($comment['created_at'])) ?>
+                        </small>
+                        <p class="mb-0"><?= nl2br(htmlspecialchars($comment['comment_text'])) ?></p>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+
+        <form action="view.php?id=<?= htmlspecialchars($request['id']) ?>" method="POST">
+            <input type="hidden" name="action" value="add_comment">
+            <div class="mb-3">
+                <label for="comment" class="form-label">Add a Comment</label>
+                <textarea class="form-control" id="comment" name="comment" rows="3" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit Comment</button>
+        </form>
+    </div>
+</div>
+
 <?php include __DIR__ . '/../app/templates/footer.php'; ?>

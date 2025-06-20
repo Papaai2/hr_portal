@@ -10,7 +10,7 @@ $manager_id = get_current_user_id();
 
 // Fetch team members
 $stmt = $pdo->prepare("
-    SELECT u.id, u.full_name, u.email, d.name AS department_name
+    SELECT u.id, u.full_name, u.email, u.employee_code, d.name AS department_name -- ADDED u.employee_code
     FROM users u
     LEFT JOIN departments d ON u.department_id = d.id
     WHERE u.direct_manager_id = ?
@@ -34,20 +34,19 @@ include __DIR__ . '/../app/templates/header.php';
                 <thead class="table-light">
                     <tr>
                         <th>Full Name</th>
-                        <th>Email</th>
+                        <th>Employee Code</th> <th>Email</th>
                         <th>Department</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($team_members)): ?>
                         <tr>
-                            <td colspan="3" class="text-center text-muted p-4">You have no team members assigned to you.</td>
-                        </tr>
+                            <td colspan="4" class="text-center text-muted p-4">You have no team members assigned to you.</td> </tr>
                     <?php else: ?>
                         <?php foreach ($team_members as $member): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($member['full_name']); ?></td>
-                                <td><?php echo htmlspecialchars($member['email']); ?></td>
+                                <td><code class="text-muted"><?php echo htmlspecialchars($member['employee_code'] ?? 'N/A'); ?></code></td> <td><?php echo htmlspecialchars($member['email']); ?></td>
                                 <td><?php echo htmlspecialchars($member['department_name'] ?? 'N/A'); ?></td>
                             </tr>
                         <?php endforeach; ?>

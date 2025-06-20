@@ -25,15 +25,27 @@ $sql = "
         u.full_name,
         u.employee_code,
         DATE(al.punch_time) as attendance_date,
+        s.shift_name,
+        s.start_time AS shift_start_time,
+        s.end_time AS shift_end_time,
+        s.is_night_shift,
+        s.grace_period_in,
+        s.grace_period_out,
         MIN(CASE WHEN al.punch_state IN (0, 4) THEN al.punch_time END) as first_in,
-        MAX(CASE WHEN al.punch_state IN (1, 5) THEN al.punch_time END) as last_out
+        MAX(CASE WHEN al.punch_state IN (1, 5) THEN al.punch_time END) as last_out,
+        -- Corrected syntax for GROUP_CONCAT with ORDER BY inside it
+        SUBSTRING_INDEX(GROUP_CONCAT(CASE WHEN al.punch_state IN (0,4) THEN al.expected_in END ORDER BY al.punch_time ASC SEPARATOR ','), ',', 1) as expected_first_in,
+        SUBSTRING_INDEX(GROUP_CONCAT(CASE WHEN al.punch_state IN (1,5) THEN al.expected_out END ORDER BY al.punch_time DESC SEPARATOR ','), ',', 1) as expected_last_out,
+        GROUP_CONCAT(DISTINCT al.violation_type ORDER BY al.violation_type ASC SEPARATOR ', ') as daily_violations
     FROM
         attendance_logs al
     JOIN
         users u ON al.employee_code = u.employee_code
+    LEFT JOIN
+        shifts s ON u.shift_id = s.id
     {$where_sql}
     GROUP BY
-        u.id, u.full_name, u.employee_code, attendance_date
+        u.id, u.full_name, u.employee_code, attendance_date, s.shift_name, s.start_time, s.end_time, s.is_night_shift, s.grace_period_in, s.grace_period_out
     ORDER BY
         u.full_name ASC
 ";
@@ -51,10 +63,10 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
 
     $output = fopen('php://output', 'w');
 
-    // Add headers to CSV
-    fputcsv($output, ['Employee', 'Employee Code', 'Date', 'First Check-In', 'Last Check-Out', 'Total Hours']);
+    // Add headers to CSV - UPDATED
+    fputcsv($output, ['Employee', 'Employee Code', 'Date', 'Shift', 'Shift Start', 'Shift End', 'Expected In', 'Actual First In', 'Expected Out', 'Actual Last Out', 'Total Hours', 'Violations']);
 
-    // Add data rows to CSV
+    // Add data rows to CSV - UPDATED
     foreach ($timesheet_data as $row) {
         $total_hours = 'Incomplete';
         if ($row['first_in'] && $row['last_out']) {
@@ -68,9 +80,15 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
             $row['full_name'],
             $row['employee_code'],
             $row['attendance_date'],
-            $row['first_in'] ? date('Y-m-d h:i:s A', strtotime($row['first_in'])) : '',
-            $row['last_out'] ? date('Y-m-d h:i:s A', strtotime($row['last_out'])) : '',
-            $total_hours
+            $row['shift_name'] ?? 'N/A',
+            $row['shift_start_time'] ? date('h:i A', strtotime($row['shift_start_time'])) : 'N/A',
+            $row['shift_end_time'] ? date('h:i A', strtotime($row['shift_end_time'])) : 'N/A',
+            $row['expected_first_in'] ? date('h:i:s A', strtotime($row['expected_first_in'])) : 'N/A',
+            $row['first_in'] ? date('h:i:s A', strtotime($row['first_in'])) : '',
+            $row['expected_last_out'] ? date('h:i:s A', strtotime($row['expected_last_out'])) : 'N/A',
+            $row['last_out'] ? date('h:i:s A', strtotime($row['last_out'])) : '',
+            $total_hours,
+            $row['daily_violations'] ?? 'None'
         ]);
     }
 
@@ -103,7 +121,7 @@ $all_users = $pdo->query("SELECT id, full_name, employee_code FROM users ORDER B
                 <select class="form-select" id="user_id" name="user_id">
                     <option value="">All Employees</option>
                     <?php foreach($all_users as $user): ?>
-                        <option value="<?= $user['id'] ?>" <?= ($user_id == $user['id']) ? 'selected' : '' ?>>
+                        <option value="<?= htmlspecialchars($user['id']) ?>" <?= ($user_id == $user['id']) ? 'selected' : '' ?>>
                             <?= htmlspecialchars($user['full_name']) ?> (<?= htmlspecialchars($user['employee_code'] ?? 'N/A') ?>)
                         </option>
                     <?php endforeach; ?>
@@ -127,11 +145,20 @@ $all_users = $pdo->query("SELECT id, full_name, employee_code FROM users ORDER B
         <div class="table-responsive">
             <table class="table table-bordered table-hover">
                 <thead class="table-light text-center">
-                    <tr><th>Employee</th><th>First Check-In</th><th>Last Check-Out</th><th>Total Hours</th></tr>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Shift</th>
+                        <th>Expected In</th>
+                        <th>Actual In</th>
+                        <th>Expected Out</th>
+                        <th>Actual Out</th>
+                        <th>Total Hours</th>
+                        <th>Violations</th>
+                    </tr>
                 </thead>
                 <tbody class="text-center">
                     <?php if (empty($timesheet_data)): ?>
-                        <tr><td colspan="4" class="text-center text-muted p-4">No attendance data found for the selected criteria.</td></tr>
+                        <tr><td colspan="8" class="text-center text-muted p-4">No attendance data found for the selected criteria.</td></tr>
                     <?php else: ?>
                         <?php foreach ($timesheet_data as $row): ?>
                             <tr>
@@ -139,19 +166,55 @@ $all_users = $pdo->query("SELECT id, full_name, employee_code FROM users ORDER B
                                     <?= htmlspecialchars($row['full_name']) ?><br>
                                     <small class="text-muted">ID: <?= htmlspecialchars($row['employee_code']) ?></small>
                                 </td>
-                                <td class="align-middle"><?= $row['first_in'] ? date('h:i:s A', strtotime($row['first_in'])) : '<span class="text-muted">--</span>' ?></td>
-                                <td class="align-middle"><?= $row['last_out'] ? date('h:i:s A', strtotime($row['last_out'])) : '<span class="text-muted">--</span>' ?></td>
+                                <td>
+                                    <?= htmlspecialchars($row['shift_name'] ?? 'N/A') ?>
+                                    <?php if (isset($row['shift_start_time']) && isset($row['shift_end_time'])): ?>
+                                        <br><small class="text-muted"><?= htmlspecialchars(date('h:i A', strtotime($row['shift_start_time']))) ?> - <?= htmlspecialchars(date('h:i A', strtotime($row['shift_end_time']))) ?></small>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="align-middle">
+                                    <?= $row['expected_first_in'] ? date('h:i:s A', strtotime($row['expected_first_in'])) : '<span class="text-muted">--</span>' ?>
+                                </td>
+                                <td class="align-middle">
+                                    <?= $row['first_in'] ? date('h:i:s A', strtotime($row['first_in'])) : '<span class="text-muted">--</span>' ?>
+                                </td>
+                                <td class="align-middle">
+                                    <?= $row['expected_last_out'] ? date('h:i:s A', strtotime($row['expected_last_out'])) : '<span class="text-muted">--</span>' ?>
+                                </td>
+                                <td class="align-middle">
+                                    <?= $row['last_out'] ? date('h:i:s A', strtotime($row['last_out'])) : '<span class="text-muted">--</span>' ?>
+                                </td>
                                 <td class="align-middle">
                                     <?php
                                     if ($row['first_in'] && $row['last_out']) {
-                                        $first_in = new DateTime($row['first_in']);
-                                        $last_out = new DateTime($row['last_out']);
-                                        $interval = $first_in->diff($last_out);
+                                        $first_in_dt = new DateTime($row['first_in']);
+                                        $last_out_dt = new DateTime($row['last_out']);
+                                        
+                                        // Handle night shift total hours calculation
+                                        if (isset($row['is_night_shift']) && $row['is_night_shift'] && $last_out_dt < $first_in_dt) {
+                                            $last_out_dt->modify('+1 day'); // Adjust if end time is on next day for night shift
+                                        }
+
+                                        $interval = $first_in_dt->diff($last_out_dt);
                                         echo $interval->format('%h hours, %i minutes');
                                     } else {
                                         echo '<span class="badge bg-warning text-dark">Incomplete</span>';
                                     }
                                     ?>
+                                </td>
+                                <td class="align-middle">
+                                    <?php if (!empty($row['daily_violations'])): ?>
+                                        <?php
+                                        $violations = explode(', ', $row['daily_violations']);
+                                        foreach ($violations as $violation):
+                                            $badge_class = 'bg-danger';
+                                            if ($violation === 'double_punch') $badge_class = 'bg-info text-dark';
+                                            echo '<span class="badge ' . $badge_class . ' me-1">' . htmlspecialchars(ucwords(str_replace('_', ' ', $violation))) . '</span>';
+                                        endforeach;
+                                        ?>
+                                    <?php else: ?>
+                                        <span class="badge bg-success">None</span>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

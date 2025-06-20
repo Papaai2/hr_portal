@@ -13,12 +13,16 @@ $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 $page_size = 25;
 $offset = ($page - 1) * $page_size;
 
-// Filtering (optional: by user, action, date)
+// Filtering (optional: by user, action, date, employee_code)
 $where = [];
 $params = [];
 if (!empty($_GET['user_id'])) {
     $where[] = 'al.user_id = ?';
     $params[] = $_GET['user_id'];
+}
+if (!empty($_GET['employee_code'])) { // NEW: Filter by employee_code
+    $where[] = 'u.employee_code LIKE ?';
+    $params[] = '%' . $_GET['employee_code'] . '%';
 }
 if (!empty($_GET['action'])) {
     $where[] = 'al.action LIKE ?';
@@ -31,32 +35,50 @@ if (!empty($_GET['date'])) {
 $where_sql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
 // Fetch logs
-$sql = "SELECT al.*, u.full_name FROM audit_logs al LEFT JOIN users u ON al.user_id = u.id $where_sql ORDER BY al.created_at DESC LIMIT $page_size OFFSET $offset";
+// MODIFIED: Select u.employee_code
+$sql = "SELECT al.*, u.full_name, u.employee_code FROM audit_logs al LEFT JOIN users u ON al.user_id = u.id {$where_sql} ORDER BY al.created_at DESC LIMIT {$page_size} OFFSET {$offset}";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $audit_logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Count total for pagination
-$count_sql = "SELECT COUNT(*) FROM audit_logs al $where_sql";
+$count_sql = "SELECT COUNT(*) FROM audit_logs al LEFT JOIN users u ON al.user_id = u.id {$where_sql}"; // MODIFIED: Join with users for count if employee_code filter is used
 $count_stmt = $pdo->prepare($count_sql);
 $count_stmt->execute($params);
 $total_logs = $count_stmt->fetchColumn();
 $total_pages = ceil($total_logs / $page_size);
+
+// Fetch all users for the dropdown filter
+$all_users = $pdo->query("SELECT id, full_name, employee_code FROM users ORDER BY full_name ASC")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <div class="container mt-4">
     <h1 class="h3 mb-4">Audit Logs</h1>
     <form class="row g-2 mb-3" method="get">
         <div class="col-md-3">
-            <input type="text" name="user_id" class="form-control" placeholder="User ID" value="<?= htmlspecialchars($_GET['user_id'] ?? '') ?>">
+            <label for="user_id" class="form-label">User</label>
+            <select class="form-select" id="user_id" name="user_id">
+                <option value="">All Users</option>
+                <?php foreach($all_users as $user_option): ?>
+                    <option value="<?= htmlspecialchars($user_option['id']) ?>" <?= (isset($_GET['user_id']) && $_GET['user_id'] == $user_option['id']) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($user_option['full_name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
         </div>
         <div class="col-md-3">
+            <label for="employee_code" class="form-label">Employee Code</label> <input type="text" name="employee_code" class="form-control" placeholder="Employee Code" value="<?= htmlspecialchars($_GET['employee_code'] ?? '') ?>">
+        </div>
+        <div class="col-md-3">
+            <label for="action" class="form-label">Action</label>
             <input type="text" name="action" class="form-control" placeholder="Action" value="<?= htmlspecialchars($_GET['action'] ?? '') ?>">
         </div>
         <div class="col-md-3">
+            <label for="date" class="form-label">Date</label>
             <input type="date" name="date" class="form-control" value="<?= htmlspecialchars($_GET['date'] ?? '') ?>">
         </div>
-        <div class="col-md-3">
-            <button type="submit" class="btn btn-primary w-100">Filter</button>
+        <div class="col-12 mt-3">
+            <button type="submit" class="btn btn-primary me-2">Filter</button>
+            <a href="audit_logs.php" class="btn btn-outline-secondary">Clear Filters</a>
         </div>
     </form>
     <div class="table-responsive">
@@ -65,7 +87,7 @@ $total_pages = ceil($total_logs / $page_size);
                 <tr>
                     <th>ID</th>
                     <th>User</th>
-                    <th>Action</th>
+                    <th>Employee Code</th> <th>Action</th>
                     <th>Details</th>
                     <th>IP Address</th>
                     <th>Date/Time</th>
@@ -73,16 +95,15 @@ $total_pages = ceil($total_logs / $page_size);
             </thead>
             <tbody>
                 <?php if (empty($audit_logs)): ?>
-                    <tr><td colspan="6" class="text-center text-muted">No audit logs found.</td></tr>
-                <?php else: ?>
+                    <tr><td colspan="7" class="text-center text-muted">No audit logs found.</td></tr> <?php else: ?>
                     <?php foreach ($audit_logs as $log): ?>
                         <tr>
-                            <td><?= htmlspecialchars($log['id'] ?? '') ?></td>
-                            <td><?= htmlspecialchars($log['full_name'] ?? 'Unknown') ?> (ID: <?= htmlspecialchars($log['user_id'] ?? '') ?>)</td>
-                            <td><?= htmlspecialchars($log['action'] ?? '') ?></td>
-                            <td style="max-width:300px; word-break:break-word; white-space:pre-wrap;"><?= htmlspecialchars($log['details'] ?? '') ?></td>
-                            <td><?= htmlspecialchars($log['ip_address'] ?? '') ?></td>
-                            <td><?= htmlspecialchars($log['created_at'] ?? '') ?></td>
+                            <td><?= htmlspecialchars($log['id']) ?></td>
+                            <td><?= htmlspecialchars($log['full_name'] ?? 'Unknown') ?> (ID: <?= htmlspecialchars($log['user_id']) ?>)</td>
+                            <td><code class="text-muted"><?= htmlspecialchars($log['employee_code'] ?? 'N/A') ?></code></td> <td><?= htmlspecialchars($log['action']) ?></td>
+                            <td style="max-width:300px; word-break:break-word; white-space:pre-wrap;"><?= htmlspecialchars($log['details']) ?></td>
+                            <td><?= htmlspecialchars($log['ip_address']) ?></td>
+                            <td><?= htmlspecialchars($log['created_at']) ?></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>

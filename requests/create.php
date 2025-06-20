@@ -33,10 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $start_date = $_POST['start_date'];
     $end_date = $_POST['end_date'];
     $reason = trim($_POST['reason']);
-    $leave_type_id = $_POST['leave_type_id'] ?? null; // NEW: Get leave type
+    $leave_type_id = $_POST['leave_type_id'] ?? null;
     $today = date('Y-m-d');
 
-    if (empty($start_date) || empty($end_date) || empty($leave_type_id)) { // MODIFIED: Added leave_type_id check
+    if (empty($start_date) || empty($end_date) || empty($leave_type_id)) {
         $error = 'Start date, end date, and leave type are required.';
     } elseif (strtotime($start_date) < strtotime($today)) {
         $error = 'Start date cannot be in the past.';
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (strtotime($end_date) < strtotime($start_date)) {
         $error = 'End date cannot be before the start date.';
     } else {
-        // Calculate number of days requested (simple calculation, may need to exclude weekends/holidays for production)
+        // Calculate number of days requested
         $start = new DateTime($start_date);
         $end = new DateTime($end_date);
         $interval = $start->diff($end);
@@ -58,9 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $pdo->beginTransaction();
 
-                $sql = "INSERT INTO vacation_requests (user_id, start_date, end_date, reason, manager_id, status, leave_type_id) VALUES (?, ?, ?, ?, ?, 'pending_manager', ?)"; // MODIFIED: Added leave_type_id
+                // MODIFIED: Added duration_days to the INSERT statement
+                $sql = "INSERT INTO vacation_requests (user_id, start_date, end_date, reason, manager_id, status, leave_type_id, duration_days) VALUES (?, ?, ?, ?, ?, 'pending_manager', ?, ?)";
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([$user_id, $start_date, $end_date, $reason, $manager_id, $leave_type_id]); // MODIFIED: Added leave_type_id
+                // MODIFIED: Added $requested_days to the execute parameters
+                $stmt->execute([$user_id, $start_date, $end_date, $reason, $manager_id, $leave_type_id, $requested_days]);
                 $request_id = $pdo->lastInsertId();
 
                 if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] == 0) {
@@ -96,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } catch (Exception $e) {
                 $pdo->rollBack();
                 $error = 'An error occurred: ' . $e->getMessage();
+                error_log("Error creating vacation request: " . $e->getMessage()); // Log the error for debugging
             }
         }
     }
@@ -124,7 +127,7 @@ include __DIR__ . '/../app/templates/header.php';
                         <select class="form-select" id="leave_type_id" name="leave_type_id" required>
                             <option value="">Select Leave Type</option>
                             <?php foreach ($leave_types as $type): ?>
-                                <option value="<?= $type['id'] ?>"><?= htmlspecialchars($type['name']) ?> (Balance: <?= $user_balances[$type['id']] ?? '0.00' ?> days)</option>
+                                <option value="<?= htmlspecialchars($type['id']) ?>"><?= htmlspecialchars($type['name']) ?> (Balance: <?= $user_balances[$type['id']] ?? '0.00' ?> days)</option>
                             <?php endforeach; ?>
                         </select>
                     </div>
