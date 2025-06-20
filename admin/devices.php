@@ -6,16 +6,13 @@
 // environment (session, database, helpers, auth) is loaded correctly.
 require_once __DIR__ . '/../app/bootstrap.php';
 
-// --- Authentication Check ---
-// This check will now work reliably.
-if (!is_logged_in() || !is_admin()) {
-    header('Location: ../login.php');
-    exit;
-}
+// --- Authentication & Authorization Check ---
+// Use require_role to ensure only admins can access this page.
+require_role('admin');
 
 // --- Database Connection ---
-$db = new Database();
-$pdo = $db->getConnection();
+// The $pdo variable is now globally available from bootstrap.php
+global $pdo; 
 $message = '';
 $message_type = '';
 
@@ -58,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ip_address = sanitize_input($_POST['ip_address']);
         $port = filter_input(INPUT_POST, 'port', FILTER_VALIDATE_INT);
         $device_brand = sanitize_input($_POST['device_brand']);
+        // CORRECTED: Checkbox value handling
         $is_active = isset($_POST['is_active']) ? 1 : 0;
 
         if ($id && $name && $ip_address && $port && $device_brand) {
@@ -121,93 +119,144 @@ include __DIR__ . '/../app/templates/header.php';
 <div class="container mx-auto my-10 px-4">
     <h1 class="text-3xl font-bold text-gray-800 mb-6">Manage Attendance Devices</h1>
 
-    <!-- Display Feedback Message -->
     <?php if ($message): ?>
-        <div class="mb-4 p-4 rounded-lg <?php echo $message_type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'; ?>">
+        <div class="alert <?php echo $message_type === 'success' ? 'alert-success' : 'alert-danger'; ?>">
             <?php echo htmlspecialchars($message); ?>
         </div>
     <?php endif; ?>
 
-    <!-- Add New Device Form -->
-    <div class="bg-white p-6 rounded-lg shadow-md mb-8">
-        <h2 class="text-2xl font-semibold mb-4">Add New Device</h2>
-        <form action="devices.php" method="POST" class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-            <div>
-                <label for="name" class="block text-sm font-medium text-gray-700">Device Name</label>
-                <input type="text" id="name" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="e.g., Main Entrance">
-            </div>
-            <div>
-                <label for="ip_address" class="block text-sm font-medium text-gray-700">IP Address</label>
-                <input type="text" id="ip_address" name="ip_address" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="e.g., 192.168.1.201">
-            </div>
-            <div>
-                <label for="port" class="block text-sm font-medium text-gray-700">Port</label>
-                <input type="number" id="port" name="port" required value="4370" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-            </div>
-            <div>
-                <label for="device_brand" class="block text-sm font-medium text-gray-700">Device Brand</label>
-                <select id="device_brand" name="device_brand" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                    <option value="zkteco">ZKTeco</option>
-                    <option value="fingertec">Fingertec</option>
-                    <!-- Add other brands here in the future -->
-                </select>
-            </div>
-            <button type="submit" name="add_device" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                Add Device
-            </button>
-        </form>
+    <div class="card shadow-sm mb-4">
+        <h2 class="card-header h5">Add New Device</h2>
+        <div class="card-body">
+            <form action="devices.php" method="POST" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label for="name" class="form-label">Device Name</label>
+                    <input type="text" id="name" name="name" required class="form-control" placeholder="e.g., Main Entrance">
+                </div>
+                <div class="col-md-3">
+                    <label for="ip_address" class="form-label">IP Address</label>
+                    <input type="text" id="ip_address" name="ip_address" required class="form-control" placeholder="e.g., 192.168.1.201">
+                </div>
+                <div class="col-md-2">
+                    <label for="port" class="form-label">Port</label>
+                    <input type="number" id="port" name="port" required value="4370" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <label for="device_brand" class="form-label">Device Brand</label>
+                    <select id="device_brand" name="device_brand" required class="form-select">
+                        <option value="zkteco">ZKTeco</option>
+                        <option value="fingertec">Fingertec</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" name="add_device" class="btn btn-primary w-100">
+                        Add Device
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <!-- Device List Table -->
-    <div class="bg-white p-6 rounded-lg shadow-md">
-        <h2 class="text-2xl font-semibold mb-4">Configured Devices</h2>
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Port</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brand</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Sync</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    <?php if (empty($devices)): ?>
+    <div class="card shadow-sm">
+        <h2 class="card-header h5">Configured Devices</h2>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-light">
                         <tr>
-                            <td colspan="7" class="px-6 py-4 whitespace-nowrap text-center text-gray-500">No devices configured yet.</td>
+                            <th>Name</th>
+                            <th>IP Address</th>
+                            <th>Port</th>
+                            <th>Brand</th>
+                            <th>Status</th>
+                            <th>Last Sync</th>
+                            <th class="text-end">Actions</th>
                         </tr>
-                    <?php else: ?>
-                        <?php foreach ($devices as $device): ?>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($devices)): ?>
                             <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><?php echo htmlspecialchars($device['name']); ?></td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($device['ip_address']); ?></td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($device['port']); ?></td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars(ucfirst($device['device_brand'])); ?></td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <?php if ($device['is_active']): ?>
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
-                                    <?php else: ?>
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Inactive</span>
-                                    <?php endif; ?>
-                                </td>
-                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <?php echo $device['last_sync_timestamp'] ? date('Y-m-d H:i:s', strtotime($device['last_sync_timestamp'])) : 'Never'; ?>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <!-- A modal-based edit form would be a great enhancement. -->
-                                    <form action="devices.php" method="POST" class="inline">
-                                        <input type="hidden" name="id" value="<?php echo $device['id']; ?>">
-                                        <button type="submit" name="delete_device" class="text-red-600 hover:text-red-900" onclick="return confirm('Are you sure you want to delete this device? This will also remove all associated attendance logs.');">Delete</button>
-                                    </form>
-                                </td>
+                                <td colspan="7" class="text-center text-muted p-4">No devices configured yet.</td>
                             </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                        <?php else: ?>
+                            <?php foreach ($devices as $device): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($device['name']); ?></td>
+                                    <td><?php echo htmlspecialchars($device['ip_address']); ?></td>
+                                    <td><?php echo htmlspecialchars($device['port']); ?></td>
+                                    <td><?php echo htmlspecialchars(ucfirst($device['device_brand'])); ?></td>
+                                    <td>
+                                        <?php if ($device['is_active']): ?>
+                                            <span class="badge bg-success">Active</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-danger">Inactive</span>
+                                        <?php endif; ?>
+                                    </td>
+                                     <td class="text-muted">
+                                        <?php echo $device['last_sync_timestamp'] ? date('Y-m-d H:i:s', strtotime($device['last_sync_timestamp'])) : 'Never'; ?>
+                                    </td>
+                                    <td class="text-end">
+                                        <form action="devices.php" method="POST" class="d-inline">
+                                            <input type="hidden" name="id" value="<?php echo $device['id']; ?>">
+                                            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editDeviceModal-<?php echo $device['id']; ?>">
+                                                <i class="bi bi-pencil-fill"></i> Edit
+                                            </button>
+                                            <button type="submit" name="delete_device" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this device? This will also remove all associated attendance logs.');">
+                                                <i class="bi bi-trash-fill"></i> Delete
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+
+                                <div class="modal fade" id="editDeviceModal-<?php echo $device['id']; ?>" tabindex="-1" aria-labelledby="editDeviceModalLabel-<?php echo $device['id']; ?>" aria-hidden="true">
+                                  <div class="modal-dialog">
+                                    <div class="modal-content">
+                                      <div class="modal-header">
+                                        <h5 class="modal-title" id="editDeviceModalLabel-<?php echo $device['id']; ?>">Edit Device</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                      </div>
+                                      <form action="devices.php" method="POST">
+                                          <div class="modal-body">
+                                                <input type="hidden" name="id" value="<?php echo $device['id']; ?>">
+                                                <div class="mb-3">
+                                                    <label for="name-<?php echo $device['id']; ?>" class="form-label">Device Name</label>
+                                                    <input type="text" id="name-<?php echo $device['id']; ?>" name="name" required class="form-control" value="<?php echo htmlspecialchars($device['name']); ?>">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="ip_address-<?php echo $device['id']; ?>" class="form-label">IP Address</label>
+                                                    <input type="text" id="ip_address-<?php echo $device['id']; ?>" name="ip_address" required class="form-control" value="<?php echo htmlspecialchars($device['ip_address']); ?>">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="port-<?php echo $device['id']; ?>" class="form-label">Port</label>
+                                                    <input type="number" id="port-<?php echo $device['id']; ?>" name="port" required class="form-control" value="<?php echo htmlspecialchars($device['port']); ?>">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="device_brand-<?php echo $device['id']; ?>" class="form-label">Device Brand</label>
+                                                    <select id="device_brand-<?php echo $device['id']; ?>" name="device_brand" required class="form-select">
+                                                        <option value="zkteco" <?php if($device['device_brand'] == 'zkteco') echo 'selected'; ?>>ZKTeco</option>
+                                                        <option value="fingertec" <?php if($device['device_brand'] == 'fingertec') echo 'selected'; ?>>Fingertec</option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="is_active" id="is_active-<?php echo $device['id']; ?>" <?php if ($device['is_active']) echo 'checked'; ?>>
+                                                    <label class="form-check-label" for="is_active-<?php echo $device['id']; ?>">
+                                                        Device is Active
+                                                    </label>
+                                                </div>
+                                          </div>
+                                          <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            <button type="submit" name="update_device" class="btn btn-primary">Save changes</button>
+                                          </div>
+                                      </form>
+                                    </div>
+                                  </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

@@ -34,8 +34,9 @@ class Database {
 
         try {
             $this->conn = new PDO($dsn, $this->username, $this->password, $options);
-            // Set the session timezone for the database connection based on the config file
-            $this->conn->exec("SET time_zone = '" . TIMEZONE . "'");
+            // MODIFIED: Use a UTC offset that MySQL understands universally.
+            // Cairo is currently UTC+3 (EEST).
+            $this->conn->exec("SET time_zone = '+03:00'");
         } catch(PDOException $exception) {
             // Re-throw the exception to be handled by the calling code
             throw new PDOException($exception->getMessage(), (int)$exception->getCode());

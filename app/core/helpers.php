@@ -2,6 +2,19 @@
 // in file: htdocs/app/core/helpers.php
 
 /**
+ * Sanitizes user input to prevent XSS.
+ *
+ * @param string $data The raw input data.
+ * @return string The sanitized data.
+ */
+function sanitize_input($data) {
+    $data = trim($data);
+    $data = stripslashes($data);
+    $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+    return $data;
+}
+
+/**
  * Creates a notification for a specific user.
  *
  * @param PDO $pdo The PDO database connection object.
