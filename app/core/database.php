@@ -1,23 +1,58 @@
 <?php
-// in file: htdocs/app/core/database.php
+// in file: app/core/database.php
 
-// This will be included by other files, so it needs to find the config file
-// The path assumes that this file is in app/core/ and config.php is in app/core/
 require_once 'config.php';
 
-$dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-];
+/**
+ * Database Class
+ *
+ * Encapsulates the database connection logic, allowing for a single,
+ * consistent way to access the database throughout the application.
+ */
+class Database {
+    private $host = DB_HOST;
+    private $db_name = DB_NAME;
+    private $username = DB_USER;
+    private $password = DB_PASS;
+    private $conn;
 
+    /**
+     * Establishes and returns a PDO database connection.
+     *
+     * @return PDO The PDO connection object.
+     * @throws PDOException if the connection fails.
+     */
+    public function getConnection() {
+        $this->conn = null;
+
+        $dsn = "mysql:host=" . $this->host . ";dbname=" . $this->db_name . ";charset=utf8mb4";
+        $options = [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES   => false,
+        ];
+
+        try {
+            $this->conn = new PDO($dsn, $this->username, $this->password, $options);
+            // Set the session timezone for the database connection based on the config file
+            $this->conn->exec("SET time_zone = '" . TIMEZONE . "'");
+        } catch(PDOException $exception) {
+            // Re-throw the exception to be handled by the calling code
+            throw new PDOException($exception->getMessage(), (int)$exception->getCode());
+        }
+
+        return $this->conn;
+    }
+}
+
+// --- Global PDO instance for backward compatibility ---
+// Many existing files directly use the global '$pdo' variable.
+// This block ensures that the variable is still available.
 try {
-    $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
-    // Set the session timezone for the database connection to a fixed offset for Cairo (UTC+3)
-    // This avoids the "Unknown or incorrect time zone" error
-    $pdo->exec("SET time_zone = '+03:00'");
-} catch (\PDOException $e) {
-    // For a real application, you might want to log this error instead of displaying it
-    throw new \PDOException($e->getMessage(), (int)$e->getCode());
+    $database = new Database();
+    $pdo = $database->getConnection();
+} catch (PDOException $e) {
+    // If the database connection fails, it's a fatal error.
+    // In a production environment, you would log this error and show a user-friendly error page.
+    die("FATAL ERROR: Database connection failed: " . $e->getMessage());
 }
