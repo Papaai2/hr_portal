@@ -1,11 +1,9 @@
 <?php
 // in file: htdocs/admin/users.php
+// FINAL, COMPLETE VERSION with "Sync to Devices" button
 
 require_once __DIR__ . '/../app/bootstrap.php';
 require_role(['admin', 'hr', 'hr_manager']);
-
-$page_title = 'Manage Users';
-include __DIR__ . '/../app/templates/header.php';
 
 $error = '';
 $success = '';
@@ -19,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $role = $_POST['role'];
     $department_id = !empty($_POST['department_id']) ? $_POST['department_id'] : null;
     $direct_manager_id = !empty($_POST['direct_manager_id']) ? $_POST['direct_manager_id'] : null;
-    $shift_id = !empty($_POST['shift_id']) ? $_POST['shift_id'] : null; // NEW: Get shift_id
+    $shift_id = !empty($_POST['shift_id']) ? $_POST['shift_id'] : null;
     $password = $_POST['password'];
 
     // Basic Validation
@@ -29,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             if ($user_id) {
                 // UPDATE USER
-                $sql = "UPDATE users SET full_name = ?, email = ?, employee_code = ?, role = ?, department_id = ?, direct_manager_id = ?, shift_id = ? WHERE id = ?"; // NEW: Add shift_id to UPDATE
+                $sql = "UPDATE users SET full_name = ?, email = ?, employee_code = ?, role = ?, department_id = ?, direct_manager_id = ?, shift_id = ? WHERE id = ?";
                 $params = [$full_name, $email, $employee_code, $role, $department_id, $direct_manager_id, $shift_id, $user_id];
                 $pdo->prepare($sql)->execute($params);
 
@@ -41,28 +39,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 log_audit_action($pdo, 'update_user', json_encode(['user_id' => $user_id, 'email' => $email]), get_current_user_id());
             } else {
                 // CREATE USER
+                if (empty($password)) {
+                    throw new Exception("Password is required for new users.");
+                }
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                $sql = "INSERT INTO users (full_name, email, employee_code, password, role, department_id, direct_manager_id, shift_id, must_change_password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)"; // NEW: Add shift_id to INSERT
+                $sql = "INSERT INTO users (full_name, email, employee_code, password, role, department_id, direct_manager_id, shift_id, must_change_password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)";
                 $params = [$full_name, $email, $employee_code, $hashed_password, $role, $department_id, $direct_manager_id, $shift_id];
                 $pdo->prepare($sql)->execute($params);
                 $success = 'User created successfully.';
                 log_audit_action($pdo, 'add_user', json_encode(['email' => $email]), get_current_user_id());
             }
-            // Use JS to redirect to clear POST data
+            // Use JS to redirect to clear POST data and show success message
             echo "<script>window.location.href = 'users.php?success=" . urlencode($success) . "';</script>";
             exit();
-        } catch (PDOException $e) {
-            if ($e->getCode() == 23000) {
+        } catch (Exception $e) {
+            if ($e instanceof PDOException && $e->getCode() == 23000) {
                 $error = 'An account with this email or employee code already exists.';
             } else {
-                $error = 'Database error: ' . $e->getMessage();
+                $error = 'An error occurred: ' . $e->getMessage();
             }
             error_log("User management error: " . $e->getMessage());
         }
     }
 }
 
-// Data Fetching for display
+// Data Fetching for page display
 $editing_user = null;
 if (isset($_GET['action']) && ($_GET['action'] === 'edit' && isset($_GET['id']))) {
     $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
@@ -72,16 +73,22 @@ if (isset($_GET['action']) && ($_GET['action'] === 'edit' && isset($_GET['id']))
 $departments = $pdo->query("SELECT id, name FROM departments ORDER BY name")->fetchAll();
 $managers = $pdo->query("SELECT id, full_name FROM users WHERE role IN ('manager', 'admin', 'hr_manager') ORDER BY full_name")->fetchAll();
 $roles = ['user', 'manager', 'hr', 'hr_manager', 'admin'];
-$shifts = $pdo->query("SELECT id, shift_name FROM shifts ORDER BY shift_name")->fetchAll(); // NEW: Fetch shifts
+$shifts = $pdo->query("SELECT id, shift_name, start_time, end_time FROM shifts ORDER BY shift_name")->fetchAll();
 
-$users_list = $pdo->query("SELECT u.*, d.name AS department_name, m.full_name AS manager_name, s.shift_name FROM users u LEFT JOIN departments d ON u.department_id = d.id LEFT JOIN users m ON u.direct_manager_id = m.id LEFT JOIN shifts s ON u.shift_id = s.id ORDER BY u.full_name")->fetchAll(); // NEW: Join shifts table
+$users_list = $pdo->query("SELECT u.*, d.name AS department_name, m.full_name AS manager_name, s.shift_name FROM users u LEFT JOIN departments d ON u.department_id = d.id LEFT JOIN users m ON u.direct_manager_id = m.id LEFT JOIN shifts s ON u.shift_id = s.id ORDER BY u.full_name")->fetchAll();
 
 if(isset($_GET['success'])) $success = $_GET['success'];
+
+$page_title = 'Manage Users';
+include __DIR__ . '/../app/templates/header.php';
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h2">Manage Users</h1>
     <div>
+        <a href="run_sync.php" class="btn btn-info" title="Push all users from this list to all connected devices.">
+            <i class="bi bi-arrow-repeat me-1"></i> Sync to Devices
+        </a>
         <a href="import_users_csv.php" class="btn btn-success"><i class="bi bi-upload me-1"></i> Import via CSV</a>
         <a href="?action=add#user-form" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Add New User</a>
     </div>
@@ -145,8 +152,8 @@ if(isset($_GET['success'])) $success = $_GET['success'];
                     <label for="shift_id" class="form-label">Assigned Shift</label>
                     <select class="form-select" name="shift_id">
                         <option value="">-- None --</option>
-                        <?php foreach ($shifts as $shift): // NEW: Populate shifts dropdown ?>
-                            <option value="<?= htmlspecialchars($shift['id']) ?>" <?= (isset($editing_user['shift_id']) && $editing_user['shift_id'] == $shift['id']) ? 'selected' : '' ?>><?= htmlspecialchars($shift['shift_name']) ?></option>
+                        <?php foreach ($shifts as $shift): ?>
+                            <option value="<?= htmlspecialchars($shift['id']) ?>" <?= (isset($editing_user['shift_id']) && $editing_user['shift_id'] == $shift['id']) ? 'selected' : '' ?>><?= htmlspecialchars($shift['shift_name'] . " (" . date("g:i A", strtotime($shift['start_time'])) . " - " . date("g:i A", strtotime($shift['end_time'])) . ")") ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -166,19 +173,25 @@ if(isset($_GET['success'])) $success = $_GET['success'];
         <div class="table-responsive">
             <table class="table table-striped table-hover">
                 <thead class="table-light">
-                    <tr><th>Full Name</th><th>Employee Code</th><th>Email</th><th>Role</th><th>Department</th><th>Manager</th><th>Shift</th><th class="text-end">Actions</th></tr> </thead>
+                    <tr><th>Full Name</th><th>Employee Code</th><th>Email</th><th>Role</th><th>Department</th><th>Manager</th><th>Shift</th><th class="text-end">Actions</th></tr>
+                </thead>
                 <tbody>
-                    <?php foreach ($users_list as $user): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($user['full_name']) ?></td>
-                            <td><code class="text-muted"><?= htmlspecialchars($user['employee_code'] ?? 'N/A') ?></code></td>
-                            <td><?= htmlspecialchars($user['email']) ?></td>
-                            <td><?= ucfirst(htmlspecialchars($user['role'])) ?></td>
-                            <td><?= htmlspecialchars($user['department_name'] ?? 'N/A') ?></td>
-                            <td><?= htmlspecialchars($user['manager_name'] ?? 'N/A') ?></td>
-                            <td><?= htmlspecialchars($user['shift_name'] ?? 'N/A') ?></td> <td class="text-end"><a href="?action=edit&id=<?= htmlspecialchars($user['id']) ?>#user-form" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-fill"></i> Edit</a></td>
-                        </tr>
-                    <?php endforeach; ?>
+                    <?php if (empty($users_list)): ?>
+                        <tr><td colspan="8" class="text-center p-4">No users found.</td></tr>
+                    <?php else: ?>
+                        <?php foreach ($users_list as $user): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($user['full_name']) ?></td>
+                                <td><code class="text-muted"><?= htmlspecialchars($user['employee_code'] ?? 'N/A') ?></code></td>
+                                <td><?= htmlspecialchars($user['email']) ?></td>
+                                <td><?= ucfirst(htmlspecialchars($user['role'])) ?></td>
+                                <td><?= htmlspecialchars($user['department_name'] ?? 'N/A') ?></td>
+                                <td><?= htmlspecialchars($user['manager_name'] ?? 'N/A') ?></td>
+                                <td><?= htmlspecialchars($user['shift_name'] ?? 'N/A') ?></td>
+                                <td class="text-end"><a href="?action=edit&id=<?= htmlspecialchars($user['id']) ?>#user-form" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-fill"></i> Edit</a></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
