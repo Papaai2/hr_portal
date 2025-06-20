@@ -21,9 +21,12 @@ class TAD
         $this->_port = $port;
         $this->_socket = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
         
+        // Set socket options for send and receive timeouts.
+        // This is crucial for UDP, so we don't wait forever if the server is offline.
         socket_set_option($this->_socket, SOL_SOCKET, SO_RCVTIMEO, ['sec' => 2, 'usec' => 0]);
         socket_set_option($this->_socket, SOL_SOCKET, SO_SNDTIMEO, ['sec' => 2, 'usec' => 0]);
-
+        
+        // The connection status will now be reliably determined by the handshake in connect().
         $this->_is_connected = $this->connect();
     }
 
@@ -39,11 +42,31 @@ class TAD
 
     public function connect(): bool
     {
-        // Simplified connection that does not send a handshake packet
-        if (@socket_connect($this->_socket, $this->_ip, $this->_port)) {
-            $this->_session_id = 1234; 
+        if (!$this->_socket) {
+            return false;
+        }
+
+        // For UDP, socket_connect just sets the default remote address. It doesn't perform a real handshake.
+        if (!@socket_connect($this->_socket, $this->_ip, $this->_port)) {
+            return false;
+        }
+        
+        // FIX: To verify the connection, send a PING and wait for a PONG.
+        // This acts as a handshake to confirm the device is online and responsive.
+        $command = "PING";
+        @socket_send($this->_socket, $command, strlen($command), 0);
+        
+        $response = @socket_read($this->_socket, 1024);
+        
+        // If we get the expected "PONG" response, the connection is considered successful.
+        if (trim($response ?? '') === 'PONG') {
+            $this->_session_id = 1234; // Set a dummy session ID for compatibility
+            $this->_is_connected = true; // Set internal state
             return true;
         }
+        
+        // If we did not receive a valid response, the device is offline or not responding.
+        $this->disconnect();
         return false;
     }
 
@@ -52,14 +75,14 @@ class TAD
         if (is_resource($this->_socket)) {
             @socket_close($this->_socket);
         }
+        $this->_is_connected = false;
         $this->_socket = null;
     }
     
-    public function getUsers() // Renamed for clarity, called by FingertecDriver's getUsers
+    public function getUsers()
     {
-        if (!$this->_is_connected) return false;
+        if (!$this->isConnected()) return [];
 
-        // Send a very simple command string
         $command = "GET_USERS";
         @socket_send($this->_socket, $command, strlen($command), 0);
         
@@ -69,7 +92,6 @@ class TAD
             return [];
         }
 
-        // The fake server sends a JSON string, so we just decode it.
         $decoded_data = json_decode($response_data, true);
         
         return is_array($decoded_data) ? $decoded_data : [];

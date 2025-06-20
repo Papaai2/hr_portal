@@ -22,12 +22,13 @@ while (true) {
     if (!$bytes_received) continue;
 
     echo "Received " . $bytes_received . " bytes from {$client_ip}:{$client_port}\n";
-    echo " -> Received Command: " . $buffer . "\n";
+    echo " -> Received Command: " . trim($buffer) . "\n";
     
     $response_packet = '';
     
-    // Check for the simple command string
-    if (trim($buffer) === 'GET_USERS') {
+    $command = trim($buffer);
+    
+    if ($command === 'GET_USERS') {
         echo " -> Action: Responding with Fake User List.\n";
         
         $fake_users = [
@@ -44,6 +45,9 @@ while (true) {
         ];
         
         $response_packet = json_encode($fake_users);
+    } elseif ($command === 'PING') { // NEW: Handle PING command
+        echo " -> Action: Responding to PING with PONG.\n";
+        $response_packet = "PONG";
     }
 
     if (!empty($response_packet)) {
