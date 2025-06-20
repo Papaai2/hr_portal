@@ -11,6 +11,9 @@ echo "HR Portal - Automatic Attendance Pull Service\n";
 echo "Timestamp: " . date('Y-m-d H:i:s') . "\n";
 echo "=================================================\n";
 
+// --- Manually include the interface BEFORE the drivers that use it ---
+require_once APP_PATH . '/core/drivers/DeviceDriverInterface.php';
+
 // --- Include Device Drivers ---
 require_once APP_PATH . '/core/drivers/FingertecDriver.php';
 require_once APP_PATH . '/core/drivers/ZKTecoDriver.php';
