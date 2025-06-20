@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 21, 2025 at 12:36 AM
+-- Generation Time: Jun 21, 2025 at 01:35 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -86,7 +86,13 @@ INSERT INTO `audit_logs` (`id`, `user_id`, `action`, `details`, `ip_address`, `c
 (13, 1, 'add_device', '{\"device_id\":\"\",\"name\":\"TRy 2\",\"ip_address\":\"127.0.0.1\",\"port\":\"4370\",\"device_brand\":\"Fingertec\"}', '127.0.0.1', '2025-06-20 22:12:34'),
 (14, 1, 'update_device', '{\"device_id\":\"2\",\"name\":\"TRy 1\",\"ip_address\":\"127.0.0.1\",\"port\":\"4371\",\"device_brand\":\"ZKTeco\"}', '127.0.0.1', '2025-06-20 22:28:14'),
 (15, 1, 'update_device', '{\"device_id\":\"4\",\"name\":\"TRy 2\",\"ip_address\":\"127.0.0.1\",\"port\":\"4371\",\"device_brand\":\"Fingertec\"}', '127.0.0.1', '2025-06-20 22:33:20'),
-(16, 1, 'update_device', '{\"device_id\":\"4\",\"name\":\"TRy 2\",\"ip_address\":\"127.0.0.1\",\"port\":\"4370\",\"device_brand\":\"Fingertec\"}', '127.0.0.1', '2025-06-20 22:33:25');
+(16, 1, 'update_device', '{\"device_id\":\"4\",\"name\":\"TRy 2\",\"ip_address\":\"127.0.0.1\",\"port\":\"4370\",\"device_brand\":\"Fingertec\"}', '127.0.0.1', '2025-06-20 22:33:25'),
+(17, 1, 'update_device', '{\"device_id\":\"2\",\"name\":\"TRy 1\",\"ip_address\":\"127.0.0.1\",\"port\":\"4370\",\"device_brand\":\"ZKTeco\"}', '127.0.0.1', '2025-06-20 22:48:27'),
+(18, 1, 'update_device', '{\"device_id\":\"2\",\"name\":\"TRy 1\",\"ip_address\":\"127.0.0.1\",\"port\":\"4371\",\"device_brand\":\"ZKTeco\"}', '127.0.0.1', '2025-06-20 22:49:53'),
+(19, 1, 'update_device', '{\"device_id\":\"4\",\"name\":\"TRy 2\",\"ip_address\":\"127.0.0.1\",\"port\":\"4371\",\"device_brand\":\"Fingertec\"}', '127.0.0.1', '2025-06-20 22:54:41'),
+(20, 1, 'update_device', '{\"device_id\":\"4\",\"name\":\"TRy 2\",\"ip_address\":\"127.0.0.1\",\"port\":\"4370\",\"device_brand\":\"Fingertec\"}', '127.0.0.1', '2025-06-20 22:54:46'),
+(21, 1, 'update_device', '{\"device_id\":\"4\",\"name\":\"TRy 2\",\"ip_address\":\"127.0.0.1\",\"port\":\"8099\",\"device_brand\":\"Fingertec\"}', '127.0.0.1', '2025-06-20 22:56:47'),
+(22, 1, 'update_device', '{\"action\":\"save_device\",\"device_id\":\"2\",\"name\":\"TRy 1\",\"ip_address\":\"127.0.0.1\",\"port\":\"4370\",\"device_brand\":\"ZKTeco\"}', '127.0.0.1', '2025-06-20 23:11:22');
 
 -- --------------------------------------------------------
 
@@ -145,8 +151,8 @@ TRUNCATE TABLE `devices`;
 --
 
 INSERT INTO `devices` (`id`, `name`, `ip_address`, `port`, `device_type`, `device_brand`, `serial_number`, `communication_key`, `is_active`, `last_sync_timestamp`, `created_at`, `updated_at`) VALUES
-(2, 'TRy 1', '127.0.0.1', 4371, 'ZKTeco', 'ZKTeco', 'TEST-SN-12345', '0', 1, NULL, '2025-06-20 22:01:03', '2025-06-20 22:28:14'),
-(4, 'TRy 2', '127.0.0.1', 4370, 'ZKTeco', 'Fingertec', NULL, '0', 1, NULL, '2025-06-20 22:12:34', '2025-06-20 22:33:25');
+(2, 'TRy 1', '127.0.0.1', 4370, 'ZKTeco', 'ZKTeco', 'TEST-SN-12345', '0', 1, NULL, '2025-06-20 22:01:03', '2025-06-20 23:11:22'),
+(4, 'TRy 2', '127.0.0.1', 8099, 'ZKTeco', 'Fingertec', NULL, '0', 1, NULL, '2025-06-20 22:12:34', '2025-06-20 22:56:47');
 
 -- --------------------------------------------------------
 
@@ -250,12 +256,12 @@ INSERT INTO `notifications` (`id`, `user_id`, `message`, `is_read`, `request_id`
 (10, 3, 'A request from Junior Engineer requires final approval.', 0, 1, '2025-06-20 20:31:45'),
 (11, 6, 'Your vacation request has received final approval.', 1, 1, '2025-06-20 20:31:55'),
 (12, 4, 'New vacation request from Junior Engineer.', 0, 5, '2025-06-20 21:47:28'),
-(13, 1, 'New request submitted by Junior Engineer, awaiting manager review.', 0, 5, '2025-06-20 21:47:28'),
+(13, 1, 'New request submitted by Junior Engineer, awaiting manager review.', 1, 5, '2025-06-20 21:47:28'),
 (14, 2, 'New request submitted by Junior Engineer, awaiting manager review.', 0, 5, '2025-06-20 21:47:28'),
 (15, 3, 'New request submitted by Junior Engineer, awaiting manager review.', 0, 5, '2025-06-20 21:47:28'),
 (16, 4, 'Leave request for Junior Engineer (#5) has been cancelled.', 0, 5, '2025-06-20 21:47:59'),
 (17, 4, 'New vacation request from Junior Engineer.', 0, 6, '2025-06-20 21:49:28'),
-(18, 1, 'New request submitted by Junior Engineer, awaiting manager review.', 0, 6, '2025-06-20 21:49:28'),
+(18, 1, 'New request submitted by Junior Engineer, awaiting manager review.', 1, 6, '2025-06-20 21:49:28'),
 (19, 2, 'New request submitted by Junior Engineer, awaiting manager review.', 0, 6, '2025-06-20 21:49:28'),
 (20, 3, 'New request submitted by Junior Engineer, awaiting manager review.', 0, 6, '2025-06-20 21:49:28'),
 (21, 2, 'Leave request for Junior Engineer (ID: 6) has been approved by their manager.', 0, 6, '2025-06-20 21:50:03'),
@@ -540,7 +546,7 @@ ALTER TABLE `attendance_logs`
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `departments`

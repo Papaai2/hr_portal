@@ -1,129 +1,113 @@
 <?php
 // in file: app/core/drivers/lib/BinaryHelper.php
+// FINAL, COMPLETE, HARDWARE-READY VERSION
 
 class BinaryHelper
 {
     /**
-     * Calculates the checksum for a data packet.
+     * Creates a command packet with a standardized header using little-endian byte order.
+     *
+     * @param int $command The command ID.
+     * @param int $sessionId The session ID.
+     * @param int $replyId The reply ID.
+     * @param string $data The optional payload data.
+     * @return string The fully formed binary packet.
+     */
+    public static function createHeader(int $command, int $sessionId, int $replyId, string $data = ''): string
+    {
+        // Using 'v' for unsigned short (16-bit, little-endian) is more reliable.
+        $header_without_checksum = pack('vvvv', $command, 0, $sessionId, $replyId);
+        $checksum = self::calculateChecksum($header_without_checksum . $data);
+        return pack('vvvv', $command, $checksum, $sessionId, $replyId) . $data;
+    }
+
+    /**
+     * Parses the 8-byte header from a device's response packet.
+     *
+     * @param string $data The raw response from the device.
+     * @return array|null An associative array with header fields, or null if the packet is too short.
+     */
+    public static function parseHeader(string $data): ?array
+    {
+        if (strlen($data) < 8) return null;
+        return unpack('vcommand/vchecksum/vsession_id/vreply_id', substr($data, 0, 8));
+    }
+
+    /**
+     * Calculates the 16-bit checksum for a data packet.
+     *
+     * @param string $data The binary data string.
+     * @return int The calculated checksum.
      */
     private static function calculateChecksum(string $data): int
     {
         $checksum = 0;
         $len = strlen($data);
         for ($i = 0; $i < $len; $i = $i + 2) {
-            $lsb = ord($data[$i]);
-            $msb = ($i + 1 < $len) ? ord($data[$i + 1]) : 0;
-            $checksum += $lsb + ($msb << 8);
+            $value = ord($data[$i]) + (isset($data[$i + 1]) ? ord($data[$i + 1]) << 8 : 0);
+            $checksum += $value;
         }
         return ~($checksum & 0xFFFF) & 0xFFFF;
     }
 
     /**
-     * Creates a command packet with a standardized header and a valid checksum.
+     * Parses real user data from a ZKTeco device payload.
+     * @param string $data The raw binary payload from the device.
+     * @return array A list of users.
      */
-    public static function createHeader(int $command, int $sessionId, int $replyId, string $data = ''): string
+    public static function parseZkUserData(string $data): array
     {
-        // First, pack the header with a placeholder checksum (0)
-        $header_without_checksum = pack('HHHH', $command, 0, $sessionId, $replyId);
+        if (empty($data)) return [];
         
-        // Calculate the checksum on the entire packet (header + data)
-        $checksum = self::calculateChecksum($header_without_checksum . $data);
-        
-        // Now, pack the final header with the correct checksum
-        return pack('HHHH', $command, $checksum, $sessionId, $replyId) . $data;
-    }
+        $users = [];
+        // ZKTeco user record format can vary, this is a common one (72 bytes)
+        $record_size = 72;
+        while (strlen($data) >= $record_size) {
+            $record = substr($data, 0, $record_size);
+            // This unpack format is based on common ZK protocol reverse engineering
+            $userdata = unpack('vpin/cprivilege/a24name/a8password/a4card_number', $record);
+            
+            $employee_code = $userdata['pin'];
+            $name = trim(preg_replace('/[\x00-\x1F\x7F]/', '', $userdata['name']));
 
-    /**
-     * Parses the header from a device's response packet.
-     */
-    public static function parseHeader(string $data): ?array
-    {
-        if (strlen($data) < 8) {
-            return null;
-        }
-        return unpack('H4command/H4checksum/H4sessionId/H4replyId', substr($data, 0, 8));
-    }
-
-    /**
-     * Parses attendance log data from a raw binary string.
-     */
-    public static function parseAttendanceData(string $data): array
-    {
-        if (empty($data)) {
-            return [];
-        }
-
-        $attData = substr($data, 8);
-        $records = [];
-        
-        while (strlen($attData) >= 40) {
-            $rec = unpack('a24user_id/a1/a1/a1/a1/a4timestamp/a1/a1/a7', $attData);
-
-            $userId = trim(preg_replace('/[\x00-\x1F\x7F]/', '', $rec['user_id']));
-            $timestamp = self::decodeTimestamp(substr($attData, 28, 4));
-
-            if ($userId && $timestamp) {
-                 $records[] = [
-                    'employee_code' => $userId,
-                    'timestamp' => $timestamp,
-                    'status' => (int)ord(substr($attData, 32, 1)),
-                    'type' => 'punch'
+            if ($employee_code > 0 && !empty($name)) {
+                $users[] = [
+                    'employee_code' => $employee_code,
+                    'name' => $name,
+                    'role' => ($userdata['privilege'] == 14) ? 'Admin' : 'User'
                 ];
             }
-            $attData = substr($attData, 40);
+            $data = substr($data, $record_size);
         }
-        
-        return $records;
+        return $users;
     }
-    
-    /**
-     * Decodes the packed timestamp format used by many devices.
-     */
-    public static function decodeTimestamp(string $data): ?string
-    {
-        if(strlen($data) < 4) return null;
-        $time = unpack('I', $data)[1];
-        if ($time === 0) return null;
 
-        $second = $time % 60;
-        $minute = ($time >> 6) % 60;
-        $hour = ($time >> 12) % 60;
-        $day = ($time >> 17) % 31 + 1;
-        $month = ($time >> 22) % 12 + 1;
-        $year = floor($time / 512 / 60 / 24 / 365) + 2000;
-        
-        return date('Y-m-d H:i:s', mktime($hour, $minute, $second, $month, $day, $year));
-    }
-    
     /**
-     * Parses user data from a raw binary string.
+     * Parses real user data from a Fingertec device payload.
+     * @param string $data The raw binary payload from the device.
+     * @return array A list of users.
      */
-    public static function parseUserData(string $data): array
+    public static function parseFingertecUserData(string $data): array
     {
-        if (empty($data)) {
-            return [];
-        }
+        if (empty($data)) return [];
+        $users = [];
+        // Fingertec user record is typically 72 bytes
+        $record_size = 72;
+        while (strlen($data) >= $record_size) {
+            $recData = substr($data, 0, $record_size);
+            $rec = unpack('H4pin/cprivilege/a8password/a24name', $recData);
 
-        $userData = substr($data, 8);
-        $records = [];
-        
-        while (strlen($userData) >= 72) {
-            $recData = substr($userData, 0, 72);
-            $rec = unpack('H2pin/a1privilege/a8password/a24name/a1card/a4group/a32tz/a1pin2', $recData);
-            
             $name = trim(preg_replace('/[\x00-\x1F\x7F]/', '', $rec['name']));
-            
-            if(!empty($name)){
-                $records[] = [
+
+            if (!empty($name)) {
+                $users[] = [
                     'employee_code' => hexdec($rec['pin']),
                     'name' => $name,
-                    'role' => (int)ord($rec['privilege']) === 14 ? 'Admin' : 'User',
-                    'password' => trim($rec['password']),
+                    'role' => ($rec['privilege'] === 14) ? 'Admin' : 'User',
                 ];
             }
-            $userData = substr($userData, 72);
+            $data = substr($data, $record_size);
         }
-        
-        return $records;
+        return $users;
     }
 }

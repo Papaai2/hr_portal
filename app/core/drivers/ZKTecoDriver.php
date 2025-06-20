@@ -1,24 +1,24 @@
 <?php
 // in file: app/core/drivers/ZKTecoDriver.php
 
-require_once __DIR__ . '/lib/zkteco/ZKTeco.php'; 
 require_once __DIR__ . '/DeviceDriverInterface.php';
+require_once __DIR__ . '/lib/zkteco/ZKTeco.php';
 
 class ZKTecoDriver implements DeviceDriverInterface
 {
     private ?ZKTeco $connection = null;
+    private bool $is_connected = false;
 
     public function connect(string $ip, int $port, ?string $key = null): bool
     {
         try {
             $this->connection = new ZKTeco($ip, $port);
-            if ($this->connection->connect()) {
-                return true;
-            }
+            $this->is_connected = $this->connection->connect();
+            return $this->is_connected;
         } catch (Exception $e) {
             error_log("ZKTeco connection failed for IP {$ip}: " . $e->getMessage());
+            $this->is_connected = false;
         }
-        $this->connection = null;
         return false;
     }
 
@@ -27,39 +27,32 @@ class ZKTecoDriver implements DeviceDriverInterface
         if ($this->connection) {
             $this->connection->disconnect();
             $this->connection = null;
+            $this->is_connected = false;
         }
+    }
+
+    public function isConnected(): bool
+    {
+        return $this->is_connected;
     }
 
     public function getDeviceName(): string
     {
-        return $this->connection ? $this->connection->getVersion() : 'ZKTeco Device';
+        if ($this->isConnected()) {
+            $version = $this->connection->getVersion();
+            return !empty($version) ? $version : 'ZKTeco Device';
+        }
+        return 'N/A';
     }
 
     public function getAttendanceLogs(): array
     {
-        return $this->connection ? $this->connection->getAttendance() : [];
+        // Stub for now
+        return $this->isConnected() ? [] : [];
     }
 
     public function getUsers(): array
     {
-        return $this->connection ? $this->connection->getUser() : [];
-    }
-
-    public function addUser(array $userData): bool
-    {
-        // This is a stub for a real implementation
-        return false;
-    }
-
-    public function updateUser(string $employee_code, array $userData): bool
-    {
-        // This is a stub for a real implementation
-        return false;
-    }
-
-    public function deleteUser(string $employee_code): bool
-    {
-         // This is a stub for a real implementation
-        return false;
+        return $this->isConnected() ? $this->connection->getUser() : [];
     }
 }

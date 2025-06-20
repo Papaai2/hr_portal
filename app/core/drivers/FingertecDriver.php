@@ -2,76 +2,43 @@
 // in file: app/core/drivers/FingertecDriver.php
 
 require_once __DIR__ . '/DeviceDriverInterface.php';
+require_once __DIR__ . '/lib/fingertec/TAD_PHP_Library.php';
 
 class FingertecDriver implements DeviceDriverInterface
 {
-    private $tad;
-    private $is_connected = false;
+    private ?TAD $tad = null;
 
-    public function connect(string $ip, int $port, $com_key = 0): bool
+    public function connect(string $ip, int $port, ?string $com_key = '0'): bool
     {
-        require_once __DIR__ . '/lib/fingertec/TAD_PHP_Library.php';
-        
         $this->tad = new TAD($ip, $port, (int)$com_key);
-        $this->is_connected = $this->tad->connect();
-        
-        return $this->is_connected;
+        return $this->tad->connect();
     }
 
     public function disconnect(): void
     {
-        if ($this->tad && $this->is_connected) {
+        if ($this->tad && $this->tad->isConnected()) {
             $this->tad->disconnect();
-            $this->is_connected = false;
         }
     }
 
     public function isConnected(): bool
     {
-        return $this->is_connected;
+        return $this->tad ? $this->tad->isConnected() : false;
+    }
+
+    public function getDeviceName(): string
+    {
+        return $this->isConnected() ? 'Fingertec Device (' . $this->tad->getVersion() . ')' : 'N/A';
     }
 
     public function getUsers(): array
     {
-        if (!$this->isConnected()) {
-            return [];
-        }
-        return $this->tad->getUsers();
+        return $this->isConnected() ? $this->tad->getUsers() : [];
     }
 
     public function getAttendanceLogs(): array
     {
-        if (!$this->isConnected()) {
-            return [];
-        }
-        return $this->tad->getAttendanceLogs();
-    }
-    
-    public function getDeviceName(): string
-    {
-         if (!$this->isConnected()) {
-            return 'N/A';
-        }
-        return 'Fingertec Device';
-    }
-    
-    public function getVersion(): string
-    {
-        return $this->tad ? $this->tad->getVersion() : 'N/A';
-    }
-
-    public function addUser(array $data): bool
-    {
-        return false;
-    }
-
-    public function updateUser(string $employee_code, array $userData): bool
-    {
-        return false;
-    }
-
-    public function deleteUser(string $employee_code): bool
-    {
-        return false;
+        // This is a stub for now, as log parsing is complex
+        return $this->isConnected() ? $this->tad->getAttendanceLogs() : [];
     }
 }

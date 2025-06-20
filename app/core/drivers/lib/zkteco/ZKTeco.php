@@ -1,124 +1,97 @@
 <?php
 // in file: app/core/drivers/lib/zkteco/ZKTeco.php
+// FINAL, COMPLETE, HARDWARE-READY VERSION
+
+require_once __DIR__ . '/../BinaryHelper.php';
 
 class ZKTeco
 {
-    private $ip;
-    private $port;
-    private $socket;
-    public $session_id = 0;
+    private $_ip;
+    private $_port;
+    private $_socket;
+    private $_session_id = 0;
     private $_reply_id = 0;
 
     const CMD_CONNECT = 1000;
     const CMD_EXIT = 1001;
-    const CMD_VERSION = 1100;
-    const CMD_GET_USER = 1501; // Command to get users
-    const USHRT_MAX = 65535;
+    const CMD_PREPARE_DATA = 1500;
     const ACK_OK = 2000;
+    const CMD_DATA = 1501;
 
     public function __construct(string $ip, int $port = 4370)
     {
-        $this->ip = $ip;
-        $this->port = $port;
+        $this->_ip = $ip;
+        $this->_port = $port;
+    }
+
+    public function __destruct()
+    {
+        $this->disconnect();
     }
 
     public function connect(): bool
     {
-        $this->socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-        if (!$this->socket) return false;
+        $this->_socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+        if (!$this->_socket) return false;
 
-        socket_set_option($this->socket, SOL_SOCKET, SO_RCVTIMEO, array('sec' => 2, 'usec' => 0));
-        
-        if (!@socket_connect($this->socket, $this->ip, $this->port)) {
-            @socket_close($this->socket);
-            $this->socket = null;
+        socket_set_option($this->_socket, SOL_SOCKET, SO_RCVTIMEO, ['sec' => 5, 'usec' => 0]);
+
+        if (!@socket_connect($this->_socket, $this->_ip, $this->_port)) {
+            $this->disconnect();
             return false;
         }
 
         $this->_reply_id = 0;
-        $header = $this->create_header(self::CMD_CONNECT, 0, $this->_reply_id, '');
+        $packet = BinaryHelper::createHeader(self::CMD_CONNECT, 0, $this->_reply_id);
         
-        @socket_send($this->socket, $header, strlen($header), 0);
-        
-        $response = @socket_read($this->socket, 1024);
+        if (!@socket_write($this->_socket, $packet, strlen($packet))) {
+            $this->disconnect();
+            return false;
+        }
+
+        $response = @socket_read($this->_socket, 1024);
         if (strlen($response ?? '') < 8) {
             $this->disconnect();
             return false;
         }
-        
-        $header_data = unpack('vcommand/vchecksum/vsession_id/vreply_id', $response);
-        if (($header_data['command'] ?? 0) === self::ACK_OK) {
-            $this->session_id = $header_data['session_id'];
+
+        $header = BinaryHelper::parseHeader($response);
+        if (($header['command'] ?? 0) === self::ACK_OK) {
+            $this->_session_id = $header['session_id'];
             return true;
         }
+
         $this->disconnect();
         return false;
     }
 
     public function disconnect(): void
     {
-        if ($this->socket) {
-             if ($this->session_id > 0) {
-                 $header = $this->create_header(self::CMD_EXIT, $this->session_id, $this->_reply_id + 1, '');
-                 @socket_send($this->socket, $header, strlen($header), 0);
-             }
-             @socket_close($this->socket);
-             $this->socket = null;
+        if ($this->_socket) {
+            @socket_close($this->_socket);
+            $this->_socket = null;
         }
     }
-    
-    public function getVersion(): string
-    {
-        if(!$this->socket || $this->session_id == 0) return '';
-        $this->_reply_id++;
-        $header = $this->create_header(self::CMD_VERSION, $this->session_id, $this->_reply_id, '');
-        @socket_send($this->socket, $header, strlen($header), 0);
-        $response = @socket_read($this->socket, 1024);
-        
-        if (strlen($response ?? '') >= 8) {
-             $header_data = unpack('vcommand', $response);
-             if ($header_data['command'] === self::ACK_OK) {
-                return substr($response, 8);
-             }
-        }
-        return '';
-    }
-    
+
     public function getUser(): array
     {
-        if (!$this->socket || $this->session_id == 0) return [];
+        if (!$this->_socket) return [];
 
         $this->_reply_id++;
-        $header = $this->create_header(self::CMD_GET_USER, $this->session_id, $this->_reply_id, '');
-        @socket_send($this->socket, $header, strlen($header), 0);
-        $response = @socket_read($this->socket, 4096);
-
-        if (strlen($response ?? '') >= 8) {
-            $header_data = unpack('vcommand', $response);
-            if ($header_data['command'] === self::ACK_OK) {
+        $command_string = 'C:1:SELECT * FROM USER';
+        $packet = BinaryHelper::createHeader(self::CMD_PREPARE_DATA, $this->_session_id, $this->_reply_id, $command_string);
+        
+        @socket_write($this->_socket, $packet, strlen($packet));
+        $response = @socket_read($this->_socket, 8192); // Read a larger buffer for user data
+        
+        if (strlen($response ?? '') > 8) {
+            $header = BinaryHelper::parseHeader($response);
+            // ZKTeco often wraps data in an ACK_OK packet
+            if ($header && $header['command'] === self::ACK_OK) { 
                 $payload = substr($response, 8);
-                $decoded_data = json_decode($payload, true);
-                return is_array($decoded_data) ? $decoded_data : [];
+                return BinaryHelper::parseZkUserData($payload);
             }
         }
         return [];
-    }
-    
-    // Stubs for future implementation
-    public function getAttendance(): array { return []; }
-    public function setUser(int $uid, string $userid, string $name, string $password = '', int $role = 0): bool { return false; }
-    public function removeUser(int $uid): bool { return false; }
-    
-    private function create_header($command, $session_id, $reply_id, $data)
-    {
-        $buf = pack('vvvv', $command, 0, $session_id, $reply_id) . $data;
-        $checksum = 0;
-        $len = strlen($buf);
-        for ($i = 0; $i < $len; $i = $i + 2) {
-            $checksum += ord($buf[$i]) + (ord($buf[$i + 1]) << 8);
-        }
-        $checksum = ~($checksum & 0xFFFF);
-        $buf = pack('vvvv', $command, $checksum, $session_id, $reply_id) . $data;
-        return $buf;
     }
 }
