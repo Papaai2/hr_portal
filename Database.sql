@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 20, 2025 at 08:09 PM
+-- Generation Time: Jun 20, 2025 at 08:52 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -43,6 +43,18 @@ CREATE TABLE `attendance_logs` (
 --
 
 TRUNCATE TABLE `attendance_logs`;
+--
+-- Dumping data for table `attendance_logs`
+--
+
+INSERT INTO `attendance_logs` (`id`, `device_id`, `employee_code`, `punch_time`, `punch_state`, `work_code`, `is_processed`, `created_at`) VALUES
+(1, 2, '1000', '2025-06-20 09:00:01', 0, NULL, 0, '2025-06-20 18:36:08'),
+(2, 2, '1002', '2025-06-20 09:01:30', 0, NULL, 0, '2025-06-20 18:36:08'),
+(3, 2, '1000', '2025-06-20 15:00:01', 1, NULL, 0, '2025-06-20 18:39:57'),
+(4, 2, '1002', '2025-06-20 15:01:30', 1, NULL, 0, '2025-06-20 18:39:57'),
+(5, 2, '1005', '2025-06-20 09:00:01', 0, NULL, 0, '2025-06-20 18:44:49'),
+(6, 2, '1005', '2025-06-20 15:00:01', 1, NULL, 0, '2025-06-20 18:44:53');
+
 -- --------------------------------------------------------
 
 --
@@ -100,6 +112,7 @@ CREATE TABLE `devices` (
   `ip_address` varchar(45) NOT NULL COMMENT 'Local IP for PULL mode, public IP for reference in PUSH mode',
   `port` int(11) NOT NULL DEFAULT 4370,
   `device_brand` varchar(50) NOT NULL COMMENT 'The driver to use, e.g., fingertec, zkteco',
+  `serial_number` varchar(100) DEFAULT NULL,
   `communication_key` varchar(255) DEFAULT '0' COMMENT 'Device password, if any',
   `is_active` tinyint(1) DEFAULT 1 COMMENT 'Toggle whether the sync script should poll this device',
   `last_sync_timestamp` datetime DEFAULT NULL COMMENT 'Tracks the last successful communication for PULL mode',
@@ -112,6 +125,13 @@ CREATE TABLE `devices` (
 --
 
 TRUNCATE TABLE `devices`;
+--
+-- Dumping data for table `devices`
+--
+
+INSERT INTO `devices` (`id`, `name`, `ip_address`, `port`, `device_brand`, `serial_number`, `communication_key`, `is_active`, `last_sync_timestamp`, `created_at`, `updated_at`) VALUES
+(2, 'Test Device', '127.0.0.1', 4370, 'zkteco', 'TEST-SN-12345', '0', 1, NULL, '2025-06-20 18:29:33', '2025-06-20 18:29:33');
+
 -- --------------------------------------------------------
 
 --
@@ -195,16 +215,16 @@ INSERT INTO `notifications` (`id`, `user_id`, `message`, `is_read`, `request_id`
 (1, 3, 'Your request was approved by your manager and sent to HR.', 0, 1, '2025-06-20 16:22:32'),
 (2, 1, 'A request from John Doe requires final approval.', 0, 1, '2025-06-20 16:22:32'),
 (3, 2, 'A request from John Doe requires final approval.', 0, 1, '2025-06-20 16:22:32'),
-(4, 5, 'A request from John Doe requires final approval.', 0, 1, '2025-06-20 16:22:32'),
+(4, 5, 'A request from John Doe requires final approval.', 1, 1, '2025-06-20 16:22:32'),
 (5, 3, 'Your vacation request has received final approval.', 0, 1, '2025-06-20 16:22:39'),
 (6, 4, 'New vacation request from John Doe.', 0, 2, '2025-06-20 16:25:33'),
 (7, 1, 'New request submitted by John Doe, awaiting manager review.', 0, 2, '2025-06-20 16:25:33'),
 (8, 2, 'New request submitted by John Doe, awaiting manager review.', 0, 2, '2025-06-20 16:25:33'),
-(9, 5, 'New request submitted by John Doe, awaiting manager review.', 0, 2, '2025-06-20 16:25:33'),
+(9, 5, 'New request submitted by John Doe, awaiting manager review.', 1, 2, '2025-06-20 16:25:33'),
 (10, 3, 'Your request was approved by your manager and sent to HR.', 0, 2, '2025-06-20 16:25:39'),
 (11, 1, 'A request from John Doe requires final approval.', 0, 2, '2025-06-20 16:25:39'),
 (12, 2, 'A request from John Doe requires final approval.', 0, 2, '2025-06-20 16:25:39'),
-(13, 5, 'A request from John Doe requires final approval.', 0, 2, '2025-06-20 16:25:39'),
+(13, 5, 'A request from John Doe requires final approval.', 1, 2, '2025-06-20 16:25:39'),
 (14, 3, 'Your vacation request has received final approval.', 0, 2, '2025-06-20 16:25:46');
 
 -- --------------------------------------------------------
@@ -272,11 +292,11 @@ TRUNCATE TABLE `users`;
 --
 
 INSERT INTO `users` (`id`, `employee_code`, `full_name`, `email`, `password`, `role`, `department_id`, `direct_manager_id`, `must_change_password`) VALUES
-(1, NULL, 'Admin User', 'admin@example.com', '$2y$10$23ct2CuBTITAEeP0wIksTun3jicGZmtCcxyhhncr3QhwpmBeg02tS', 'admin', NULL, NULL, 0),
-(2, NULL, 'HR Manager', 'hr.manager@example.com', '$2y$10$23ct2CuBTITAEeP0wIksTun3jicGZmtCcxyhhncr3QhwpmBeg02tS', 'hr_manager', 1, 1, 0),
+(1, '1001', 'Admin User', 'admin@example.com', '$2y$10$23ct2CuBTITAEeP0wIksTun3jicGZmtCcxyhhncr3QhwpmBeg02tS', 'admin', NULL, NULL, 0),
+(2, '1002', 'HR Manager', 'hr.manager@example.com', '$2y$10$23ct2CuBTITAEeP0wIksTun3jicGZmtCcxyhhncr3QhwpmBeg02tS', 'hr_manager', 1, 1, 0),
 (3, NULL, 'John Doe', 'john.doe@example.com', '$2y$10$23ct2CuBTITAEeP0wIksTun3jicGZmtCcxyhhncr3QhwpmBeg02tS', 'user', 2, 4, 0),
 (4, NULL, 'Jane Smith', 'jane.smith@example.com', '$2y$10$23ct2CuBTITAEeP0wIksTun3jicGZmtCcxyhhncr3QhwpmBeg02tS', 'manager', 2, 1, 0),
-(5, NULL, 'Joseph Ashraf', 'eptj0e@gmail.com', '$2y$10$23ct2CuBTITAEeP0wIksTun3jicGZmtCcxyhhncr3QhwpmBeg02tS', 'admin', NULL, NULL, 0);
+(5, '1000', 'Joseph Ashraf', 'eptj0e@gmail.com', '$2y$10$23ct2CuBTITAEeP0wIksTun3jicGZmtCcxyhhncr3QhwpmBeg02tS', 'admin', NULL, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -343,7 +363,8 @@ ALTER TABLE `departments`
 -- Indexes for table `devices`
 --
 ALTER TABLE `devices`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `serial_number` (`serial_number`);
 
 --
 -- Indexes for table `leave_balances`
@@ -409,7 +430,7 @@ ALTER TABLE `vacation_requests`
 -- AUTO_INCREMENT for table `attendance_logs`
 --
 ALTER TABLE `attendance_logs`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `audit_logs`
@@ -427,7 +448,7 @@ ALTER TABLE `departments`
 -- AUTO_INCREMENT for table `devices`
 --
 ALTER TABLE `devices`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `leave_balances`
