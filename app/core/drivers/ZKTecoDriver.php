@@ -28,6 +28,16 @@ class ZKTecoDriver implements DeviceDriverInterface
         }
     }
 
+    public function getDeviceName(): string
+    {
+        if (!$this->connection) {
+            return '';
+        }
+        $version = $this->connection->get_version();
+        return is_string($version) ? trim($version) : 'ZKTeco Device';
+    }
+
+
     public function getAttendanceLogs(): array
     {
         if (!$this->connection) {
@@ -55,7 +65,22 @@ class ZKTecoDriver implements DeviceDriverInterface
         if (!$this->connection) {
             return [];
         }
-        return $this->connection->get_user_info();
+        $rawUsers = $this->connection->get_user_info();
+        if (!is_array($rawUsers)) {
+            return [];
+        }
+
+        $standardizedUsers = [];
+        foreach ($rawUsers as $employeeCode => $user) {
+             // Role mapping: 0=User, >0=Some form of Admin (e.g., 14 for Super Admin).
+            $role_text = ($user['role'] > 0) ? 'Admin' : 'User';
+            $standardizedUsers[] = [
+                'employee_code' => (string)$employeeCode,
+                'name'          => $user['name'],
+                'role'          => $role_text
+            ];
+        }
+        return $standardizedUsers;
     }
     
     private function mapDeviceStatusToPunchState(int $deviceStatus): int

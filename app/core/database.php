@@ -34,9 +34,12 @@ class Database {
 
         try {
             $this->conn = new PDO($dsn, $this->username, $this->password, $options);
-            // MODIFIED: Use a UTC offset that MySQL understands universally.
-            // Cairo is currently UTC+3 (EEST).
-            $this->conn->exec("SET time_zone = '+03:00'");
+            
+            // MODIFIED: Dynamically set the MySQL timezone based on the PHP timezone.
+            // This correctly handles DST for timezones like 'Africa/Cairo'.
+            $offset_string = (new DateTime('now', new DateTimeZone(TIMEZONE)))->format('P');
+            $this->conn->exec("SET time_zone = '{$offset_string}'");
+
         } catch(PDOException $exception) {
             // Re-throw the exception to be handled by the calling code
             throw new PDOException($exception->getMessage(), (int)$exception->getCode());

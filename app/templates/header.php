@@ -78,8 +78,10 @@ require_once __DIR__ . '/../core/config.php';
                             <i class="bi bi-person-circle"></i> <?php echo htmlspecialchars($_SESSION['full_name']); ?>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end mt-2">
-                            <li><a class="dropdown-item" href="/admin/audit_logs.php">Audit Logs</a></li>
-                            <li><hr class="dropdown-divider"></li>
+                            <?php if (in_array($_SESSION['role'], ['admin', 'hr_manager'])): ?>
+                                <li><a class="dropdown-item" href="/admin/audit_logs.php">Audit Logs</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                            <?php endif; ?>
                             <li><a class="dropdown-item" href="/logout.php"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
                         </ul>
                     </li>

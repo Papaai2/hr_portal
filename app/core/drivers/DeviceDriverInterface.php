@@ -15,10 +15,10 @@ interface DeviceDriverInterface
      *
      * @param string $ip The IP address of the device.
      * @param int $port The communication port of the device.
-     * @param string $key The communication key or password for the device (if any).
+     * @param string|null $key The communication key or password for the device (if any).
      * @return bool True on successful connection, false otherwise.
      */
-    public function connect(string $ip, int $port, string $key): bool;
+    public function connect(string $ip, int $port, ?string $key): bool;
 
     /**
      * Terminates the connection to the hardware device.
