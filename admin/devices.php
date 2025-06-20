@@ -2,23 +2,18 @@
 // admin/devices.php
 
 // --- Bootstrap The Application ---
-// By including this single file, we ensure the entire application
-// environment (session, database, helpers, auth) is loaded correctly.
 require_once __DIR__ . '/../app/bootstrap.php';
 
 // --- Authentication & Authorization Check ---
-// Use require_role to ensure only admins can access this page.
 require_role('admin');
 
 // --- Database Connection ---
-// The $pdo variable is now globally available from bootstrap.php
-global $pdo; 
+global $pdo;
 $message = '';
 $message_type = '';
 
 // --- BEGIN BACKEND LOGIC (FORM PROCESSING) ---
 
-// Handle POST requests for Add, Update, Delete
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // --- Add New Device ---
@@ -27,11 +22,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ip_address = sanitize_input($_POST['ip_address']);
         $port = filter_input(INPUT_POST, 'port', FILTER_VALIDATE_INT);
         $device_brand = sanitize_input($_POST['device_brand']);
+        $serial_number = sanitize_input($_POST['serial_number']);
 
-        if ($name && $ip_address && $port && $device_brand) {
+        if ($name && $ip_address && $port && $device_brand && $serial_number) {
             try {
-                $stmt = $pdo->prepare("INSERT INTO devices (name, ip_address, port, device_brand) VALUES (?, ?, ?, ?)");
-                if ($stmt->execute([$name, $ip_address, $port, $device_brand])) {
+                $stmt = $pdo->prepare("INSERT INTO devices (name, ip_address, port, device_brand, serial_number) VALUES (?, ?, ?, ?, ?)");
+                if ($stmt->execute([$name, $ip_address, $port, $device_brand, $serial_number])) {
                     $message = 'Device added successfully!';
                     $message_type = 'success';
                 } else {
@@ -39,11 +35,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message_type = 'error';
                 }
             } catch (PDOException $e) {
-                $message = 'Database error: ' . $e->getMessage();
+                if ($e->getCode() == '23000') {
+                    $message = 'Error: A device with this Serial Number already exists.';
+                } else {
+                    $message = 'Database error: ' . $e->getMessage();
+                }
                 $message_type = 'error';
             }
         } else {
-            $message = 'Please fill in all fields correctly.';
+            $message = 'Please fill in all fields correctly, including the Serial Number.';
             $message_type = 'error';
         }
     }
@@ -55,13 +55,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ip_address = sanitize_input($_POST['ip_address']);
         $port = filter_input(INPUT_POST, 'port', FILTER_VALIDATE_INT);
         $device_brand = sanitize_input($_POST['device_brand']);
-        // CORRECTED: Checkbox value handling
+        $serial_number = sanitize_input($_POST['serial_number']);
         $is_active = isset($_POST['is_active']) ? 1 : 0;
 
-        if ($id && $name && $ip_address && $port && $device_brand) {
+        if ($id && $name && $ip_address && $port && $device_brand && $serial_number) {
             try {
-                $stmt = $pdo->prepare("UPDATE devices SET name = ?, ip_address = ?, port = ?, device_brand = ?, is_active = ? WHERE id = ?");
-                if ($stmt->execute([$name, $ip_address, $port, $device_brand, $is_active, $id])) {
+                $stmt = $pdo->prepare("UPDATE devices SET name = ?, ip_address = ?, port = ?, device_brand = ?, serial_number = ?, is_active = ? WHERE id = ?");
+                if ($stmt->execute([$name, $ip_address, $port, $device_brand, $serial_number, $is_active, $id])) {
                     $message = 'Device updated successfully!';
                     $message_type = 'success';
                 } else {
@@ -69,11 +69,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message_type = 'error';
                 }
             } catch (PDOException $e) {
-                $message = 'Database error: ' . $e->getMessage();
+                if ($e->getCode() == '23000') {
+                    $message = 'Error: A device with this Serial Number already exists.';
+                } else {
+                    $message = 'Database error: ' . $e->getMessage();
+                }
                 $message_type = 'error';
             }
         } else {
-            $message = 'Invalid data submitted.';
+            $message = 'Invalid data submitted. Please ensure all fields are filled, including the Serial Number.';
             $message_type = 'error';
         }
     }
@@ -83,11 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
         if ($id) {
             try {
-                // First, delete related attendance logs to avoid foreign key constraints
                 $stmt_delete_logs = $pdo->prepare("DELETE FROM attendance_logs WHERE device_id = ?");
                 $stmt_delete_logs->execute([$id]);
-
-                // Then, delete the device itself
                 $stmt = $pdo->prepare("DELETE FROM devices WHERE id = ?");
                 if ($stmt->execute([$id])) {
                     $message = 'Device and related logs deleted successfully!';
@@ -112,12 +113,11 @@ $devices = $stmt_get_all->fetchAll(PDO::FETCH_ASSOC);
 
 
 // --- BEGIN TEMPLATE ---
-// The header file should handle the HTML head, body tag, and main navigation.
 include __DIR__ . '/../app/templates/header.php';
 ?>
 
-<div class="container mx-auto my-10 px-4">
-    <h1 class="text-3xl font-bold text-gray-800 mb-6">Manage Attendance Devices</h1>
+<div class="container my-4">
+    <h1 class="h2 mb-4">Manage Attendance Devices</h1>
 
     <?php if ($message): ?>
         <div class="alert <?php echo $message_type === 'success' ? 'alert-success' : 'alert-danger'; ?>">
@@ -129,19 +129,23 @@ include __DIR__ . '/../app/templates/header.php';
         <h2 class="card-header h5">Add New Device</h2>
         <div class="card-body">
             <form action="devices.php" method="POST" class="row g-3 align-items-end">
-                <div class="col-md-3">
+                <div class="col-md">
                     <label for="name" class="form-label">Device Name</label>
                     <input type="text" id="name" name="name" required class="form-control" placeholder="e.g., Main Entrance">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md">
                     <label for="ip_address" class="form-label">IP Address</label>
                     <input type="text" id="ip_address" name="ip_address" required class="form-control" placeholder="e.g., 192.168.1.201">
                 </div>
-                <div class="col-md-2">
+                 <div class="col-md">
+                    <label for="serial_number" class="form-label">Serial Number</label>
+                    <input type="text" id="serial_number" name="serial_number" required class="form-control" placeholder="Find on device label">
+                </div>
+                <div class="col-md">
                     <label for="port" class="form-label">Port</label>
                     <input type="number" id="port" name="port" required value="4370" class="form-control">
                 </div>
-                <div class="col-md-2">
+                <div class="col-md">
                     <label for="device_brand" class="form-label">Device Brand</label>
                     <select id="device_brand" name="device_brand" required class="form-select">
                         <option value="zkteco">ZKTeco</option>
@@ -149,9 +153,7 @@ include __DIR__ . '/../app/templates/header.php';
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <button type="submit" name="add_device" class="btn btn-primary w-100">
-                        Add Device
-                    </button>
+                    <button type="submit" name="add_device" class="btn btn-primary w-100">Add Device</button>
                 </div>
             </form>
         </div>
@@ -161,12 +163,12 @@ include __DIR__ . '/../app/templates/header.php';
         <h2 class="card-header h5">Configured Devices</h2>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-striped table-hover">
+                <table class="table table-striped table-hover align-middle">
                     <thead class="table-light">
                         <tr>
                             <th>Name</th>
                             <th>IP Address</th>
-                            <th>Port</th>
+                            <th>Serial Number</th>
                             <th>Brand</th>
                             <th>Status</th>
                             <th>Last Sync</th>
@@ -175,15 +177,13 @@ include __DIR__ . '/../app/templates/header.php';
                     </thead>
                     <tbody>
                         <?php if (empty($devices)): ?>
-                            <tr>
-                                <td colspan="7" class="text-center text-muted p-4">No devices configured yet.</td>
-                            </tr>
+                            <tr><td colspan="7" class="text-center text-muted p-4">No devices configured yet.</td></tr>
                         <?php else: ?>
                             <?php foreach ($devices as $device): ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($device['name']); ?></td>
                                     <td><?php echo htmlspecialchars($device['ip_address']); ?></td>
-                                    <td><?php echo htmlspecialchars($device['port']); ?></td>
+                                    <td><code class="text-muted"><?php echo htmlspecialchars($device['serial_number'] ?? 'N/A'); ?></code></td>
                                     <td><?php echo htmlspecialchars(ucfirst($device['device_brand'])); ?></td>
                                     <td>
                                         <?php if ($device['is_active']): ?>
@@ -192,61 +192,62 @@ include __DIR__ . '/../app/templates/header.php';
                                             <span class="badge bg-danger">Inactive</span>
                                         <?php endif; ?>
                                     </td>
-                                     <td class="text-muted">
-                                        <?php echo $device['last_sync_timestamp'] ? date('Y-m-d H:i:s', strtotime($device['last_sync_timestamp'])) : 'Never'; ?>
+                                     <td class="text-muted small">
+                                        <?php echo $device['last_sync_timestamp'] ? date('Y-m-d H:i', strtotime($device['last_sync_timestamp'])) : 'Never'; ?>
                                     </td>
                                     <td class="text-end">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editDeviceModal-<?php echo $device['id']; ?>">
+                                            <i class="bi bi-pencil-fill"></i> Edit
+                                        </button>
                                         <form action="devices.php" method="POST" class="d-inline">
                                             <input type="hidden" name="id" value="<?php echo $device['id']; ?>">
-                                            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editDeviceModal-<?php echo $device['id']; ?>">
-                                                <i class="bi bi-pencil-fill"></i> Edit
-                                            </button>
-                                            <button type="submit" name="delete_device" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this device? This will also remove all associated attendance logs.');">
-                                                <i class="bi bi-trash-fill"></i> Delete
+                                            <button type="submit" name="delete_device" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure? This will also remove all associated attendance logs.');">
+                                                <i class="bi bi-trash-fill"></i>
                                             </button>
                                         </form>
                                     </td>
                                 </tr>
 
-                                <div class="modal fade" id="editDeviceModal-<?php echo $device['id']; ?>" tabindex="-1" aria-labelledby="editDeviceModalLabel-<?php echo $device['id']; ?>" aria-hidden="true">
+                                <div class="modal fade" id="editDeviceModal-<?php echo $device['id']; ?>" tabindex="-1">
                                   <div class="modal-dialog">
                                     <div class="modal-content">
-                                      <div class="modal-header">
-                                        <h5 class="modal-title" id="editDeviceModalLabel-<?php echo $device['id']; ?>">Edit Device</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                      </div>
+                                      <div class="modal-header"><h5 class="modal-title">Edit Device</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                                       <form action="devices.php" method="POST">
                                           <div class="modal-body">
                                                 <input type="hidden" name="id" value="<?php echo $device['id']; ?>">
                                                 <div class="mb-3">
-                                                    <label for="name-<?php echo $device['id']; ?>" class="form-label">Device Name</label>
-                                                    <input type="text" id="name-<?php echo $device['id']; ?>" name="name" required class="form-control" value="<?php echo htmlspecialchars($device['name']); ?>">
+                                                    <label class="form-label">Device Name</label>
+                                                    <input type="text" name="name" required class="form-control" value="<?php echo htmlspecialchars($device['name'] ?? ''); ?>">
                                                 </div>
                                                 <div class="mb-3">
-                                                    <label for="ip_address-<?php echo $device['id']; ?>" class="form-label">IP Address</label>
-                                                    <input type="text" id="ip_address-<?php echo $device['id']; ?>" name="ip_address" required class="form-control" value="<?php echo htmlspecialchars($device['ip_address']); ?>">
+                                                    <label class="form-label">IP Address</label>
+                                                    <input type="text" name="ip_address" required class="form-control" value="<?php echo htmlspecialchars($device['ip_address'] ?? ''); ?>">
                                                 </div>
                                                 <div class="mb-3">
-                                                    <label for="port-<?php echo $device['id']; ?>" class="form-label">Port</label>
-                                                    <input type="number" id="port-<?php echo $device['id']; ?>" name="port" required class="form-control" value="<?php echo htmlspecialchars($device['port']); ?>">
+                                                    <label class="form-label">Serial Number</label>
+                                                    <input type="text" name="serial_number" required class="form-control" value="<?php echo htmlspecialchars($device['serial_number'] ?? ''); ?>">
                                                 </div>
-                                                <div class="mb-3">
-                                                    <label for="device_brand-<?php echo $device['id']; ?>" class="form-label">Device Brand</label>
-                                                    <select id="device_brand-<?php echo $device['id']; ?>" name="device_brand" required class="form-select">
-                                                        <option value="zkteco" <?php if($device['device_brand'] == 'zkteco') echo 'selected'; ?>>ZKTeco</option>
-                                                        <option value="fingertec" <?php if($device['device_brand'] == 'fingertec') echo 'selected'; ?>>Fingertec</option>
-                                                    </select>
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label">Port</label>
+                                                        <input type="number" name="port" required class="form-control" value="<?php echo htmlspecialchars($device['port'] ?? ''); ?>">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label">Device Brand</label>
+                                                        <select name="device_brand" required class="form-select">
+                                                            <option value="zkteco" <?php if($device['device_brand'] == 'zkteco') echo 'selected'; ?>>ZKTeco</option>
+                                                            <option value="fingertec" <?php if($device['device_brand'] == 'fingertec') echo 'selected'; ?>>Fingertec</option>
+                                                        </select>
+                                                    </div>
                                                 </div>
                                                 <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="is_active" id="is_active-<?php echo $device['id']; ?>" <?php if ($device['is_active']) echo 'checked'; ?>>
-                                                    <label class="form-check-label" for="is_active-<?php echo $device['id']; ?>">
-                                                        Device is Active
-                                                    </label>
+                                                    <input class="form-check-input" type="checkbox" name="is_active" id="is_active-<?php echo $device['id']; ?>" value="1" <?php if ($device['is_active']) echo 'checked'; ?>>
+                                                    <label class="form-check-label" for="is_active-<?php echo $device['id']; ?>">Device is Active</label>
                                                 </div>
                                           </div>
                                           <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                            <button type="submit" name="update_device" class="btn btn-primary">Save changes</button>
+                                            <button type="submit" name="update_device" class="btn btn-primary">Save Changes</button>
                                           </div>
                                       </form>
                                     </div>
@@ -262,6 +263,5 @@ include __DIR__ . '/../app/templates/header.php';
 </div>
 
 <?php
-// This should include the closing body and html tags.
 include __DIR__ . '/../app/templates/footer.php';
 ?>

@@ -19,6 +19,8 @@ require_once APP_PATH . '/core/database.php';
 require_once APP_PATH . '/core/helpers.php';
 require_once APP_PATH . '/core/auth.php';
 
-// You can add any other global initializations here in the future.
+// --- Include Service Classes ---
+// This makes services like AttendanceService globally available.
+require_once APP_PATH . '/core/services/AttendanceService.php';
 
-?>
+// You can add any other global initializations here in the future.
