@@ -1,17 +1,20 @@
 <?php
-
 // A simple script to be run from the command line (CLI)
 // Example usage: php scripts/import_users_from_device.php --ip=192.168.1.201 --brand=zkteco
 
 echo "-------------------------------------------\n";
-echo "HR Portal - Device User Import Script\n";
+echo "HR Portal - Device User Import Script (PULL)\n";
 echo "-------------------------------------------\n";
 
 // --- Bootstrap the application ---
 // This ensures we have access to our database, drivers, and services.
-require_once __DIR__ . '/../app/core/database.php';
-require_once __DIR__ . '/../app/core/drivers/FingertecDriver.php';
-require_once __DIR__ . '/../app/core/drivers/ZKTecoDriver.php';
+require_once __DIR__ . '/../app/bootstrap.php';
+
+// --- Include Device Drivers ---
+// These are needed for this specific script's functionality.
+require_once APP_PATH . '/core/drivers/FingertecDriver.php';
+require_once APP_PATH . '/core/drivers/ZKTecoDriver.php';
+
 
 // --- Helper function for parsing command line arguments ---
 function get_cli_arg($arg_name) {
@@ -38,7 +41,6 @@ if (!$ip || !$brand) {
 echo "[INFO] Attempting to import from device at IP: {$ip} (Brand: {$brand})\n";
 
 // --- The Driver Factory ---
-// This block dynamically selects and instantiates the correct driver.
 $driver = null;
 switch (strtolower($brand)) {
     case 'fingertec':
@@ -54,7 +56,6 @@ switch (strtolower($brand)) {
 
 // --- Main Logic ---
 try {
-    // 1. Connect to the device
     echo "[INFO] Connecting to device...\n";
     if (!$driver->connect($ip, (int)$port, '0')) {
         echo "[ERROR] Connection failed. Please check the IP address and network connection.\n";
@@ -62,7 +63,6 @@ try {
     }
     echo "[SUCCESS] Connected to device: " . $driver->getDeviceName() . "\n";
 
-    // 2. Get users from the device
     echo "[INFO] Fetching user list from device. This may take a moment...\n";
     $deviceUsers = $driver->getUsers();
     if (empty($deviceUsers)) {
@@ -72,26 +72,22 @@ try {
     }
     echo "[SUCCESS] Found " . count($deviceUsers) . " users on the device.\n";
 
-    // 3. Process and insert users into the database
     echo "[INFO] Starting database import process...\n";
-    $db = new Database();
-    $pdo = $db->getConnection();
+    global $pdo; // Use the global PDO connection from bootstrap.php
 
     $stmt_check = $pdo->prepare("SELECT id FROM users WHERE employee_code = ?");
-    $stmt_insert = $pdo->prepare("INSERT INTO users (employee_code, name, password, role) VALUES (?, ?, ?, ?)");
+    $stmt_insert = $pdo->prepare("INSERT INTO users (employee_code, full_name, password, role, must_change_password) VALUES (?, ?, ?, ?, 1)");
 
     $importedCount = 0;
     $skippedCount = 0;
     
-    // Default password for new users. They should be prompted to change it on first login.
     $defaultPassword = password_hash('welcome123', PASSWORD_DEFAULT);
 
     foreach ($deviceUsers as $user) {
         $employeeCode = $user['employee_code'];
         $name = $user['name'];
-        $role = ($user['role'] === 'Admin') ? 'admin' : 'employee';
+        $role = ($user['role'] === 'Admin') ? 'admin' : 'user';
 
-        // Check if user already exists
         $stmt_check->execute([$employeeCode]);
         if ($stmt_check->fetch()) {
             echo "  - Skipping user '{$name}' (Code: {$employeeCode}): Already exists in database.\n";
@@ -99,7 +95,6 @@ try {
             continue;
         }
 
-        // Insert new user
         if ($stmt_insert->execute([$employeeCode, $name, $defaultPassword, $role])) {
             echo "  - Imported user '{$name}' (Code: {$employeeCode}).\n";
             $importedCount++;
@@ -115,11 +110,9 @@ try {
     echo " - Skipped (Duplicates):  {$skippedCount}\n";
     echo "-------------------------------------------\n";
 
-
 } catch (Exception $e) {
     echo "[FATAL ERROR] An unexpected error occurred: " . $e->getMessage() . "\n";
 } finally {
-    // 4. Always disconnect
     if ($driver) {
         $driver->disconnect();
         echo "[INFO] Disconnected from device.\n";
@@ -127,4 +120,3 @@ try {
 }
 
 exit(0);
-

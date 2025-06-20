@@ -1,5 +1,4 @@
 <?php
-
 // A script to be run automatically by a scheduler (e.g., cron job or Windows Task Scheduler)
 // It fetches new attendance logs from all active devices configured in the database.
 
@@ -9,15 +8,17 @@ echo "Timestamp: " . date('Y-m-d H:i:s') . "\n";
 echo "=================================================\n";
 
 // --- Bootstrap the application ---
-require_once __DIR__ . '/../app/core/database.php';
-require_once __DIR__ . '/../app/core/drivers/FingertecDriver.php';
-require_once __DIR__ . '/../app/core/drivers/ZKTecoDriver.php';
-require_once __DIR__ . '/../app/core/services/AttendanceService.php';
+require_once __DIR__ . '/../app/bootstrap.php';
+
+// --- Include Device Drivers ---
+require_once APP_PATH . '/core/drivers/FingertecDriver.php';
+require_once APP_PATH . '/core/drivers/ZKTecoDriver.php';
+
 
 try {
+    global $pdo; // Use the global PDO connection from bootstrap.php
+
     // --- Get all active devices from the database ---
-    $db = new Database();
-    $pdo = $db->getConnection();
     $stmt_get_devices = $pdo->query("SELECT * FROM devices WHERE is_active = 1");
     $devices = $stmt_get_devices->fetchAll(PDO::FETCH_ASSOC);
 
@@ -51,7 +52,7 @@ try {
                 $driver = new ZKTecoDriver();
                 break;
             default:
-                echo "[WARNING] Skipper device '{$deviceName}': Unknown brand '{$brand}'.\n";
+                echo "[WARNING] Skipped device '{$deviceName}': Unknown brand '{$brand}'.\n";
                 continue 2; // continue the outer foreach loop
         }
 
@@ -74,6 +75,7 @@ try {
 
         // 3. Save logs using the service
         echo "[INFO] Saving logs to database...\n";
+        // Pass the device ID to the service
         $result = $attendanceService->saveStandardizedLogs($logs, $deviceId);
         echo "[OK] Save complete. New: {$result['success']}, Duplicates: {$result['duplicates']}, Failed: {$result['failed']}.\n";
 

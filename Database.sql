@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 20, 2025 at 08:52 PM
+-- Generation Time: Jun 20, 2025 at 09:13 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -43,18 +43,6 @@ CREATE TABLE `attendance_logs` (
 --
 
 TRUNCATE TABLE `attendance_logs`;
---
--- Dumping data for table `attendance_logs`
---
-
-INSERT INTO `attendance_logs` (`id`, `device_id`, `employee_code`, `punch_time`, `punch_state`, `work_code`, `is_processed`, `created_at`) VALUES
-(1, 2, '1000', '2025-06-20 09:00:01', 0, NULL, 0, '2025-06-20 18:36:08'),
-(2, 2, '1002', '2025-06-20 09:01:30', 0, NULL, 0, '2025-06-20 18:36:08'),
-(3, 2, '1000', '2025-06-20 15:00:01', 1, NULL, 0, '2025-06-20 18:39:57'),
-(4, 2, '1002', '2025-06-20 15:01:30', 1, NULL, 0, '2025-06-20 18:39:57'),
-(5, 2, '1005', '2025-06-20 09:00:01', 0, NULL, 0, '2025-06-20 18:44:49'),
-(6, 2, '1005', '2025-06-20 15:00:01', 1, NULL, 0, '2025-06-20 18:44:53');
-
 -- --------------------------------------------------------
 
 --
@@ -130,7 +118,7 @@ TRUNCATE TABLE `devices`;
 --
 
 INSERT INTO `devices` (`id`, `name`, `ip_address`, `port`, `device_brand`, `serial_number`, `communication_key`, `is_active`, `last_sync_timestamp`, `created_at`, `updated_at`) VALUES
-(2, 'Test Device', '127.0.0.1', 4370, 'zkteco', 'TEST-SN-12345', '0', 1, NULL, '2025-06-20 18:29:33', '2025-06-20 18:29:33');
+(2, 'Local Fake Device', '127.0.0.1', 4370, 'zkteco', 'FAKE-PULL-1', '0', 1, NULL, '2025-06-20 18:29:33', '2025-06-20 18:57:26');
 
 -- --------------------------------------------------------
 
