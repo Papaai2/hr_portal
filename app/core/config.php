@@ -2,14 +2,14 @@
 // in file: app/core/config.php
 
 // --- Database Configuration ---
-define('DB_HOST', 'sql303.infinityfree.com');
-define('DB_USER', 'if0_39245704');
-define('DB_PASS', 'qMuNlJBGiY9A');
-define('DB_NAME', 'if0_39245704_hr_portal');
+define('DB_HOST', 'localhost');
+define('DB_USER', 'root');
+define('DB_PASS', ''); // Assuming a blank password for local development
+define('DB_NAME', 'hr_portal');
 
 // --- Site Configuration ---
 define('SITE_NAME', 'HR Portal');
-define('BASE_URL', 'https://windportaltest.free.nf');
+define('BASE_URL', 'http://localhost'); // Corrected for root directory
 define('TIMEZONE', 'Africa/Cairo');
 
 // --- Error Reporting & Timezone ---
