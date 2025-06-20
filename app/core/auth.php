@@ -54,3 +54,19 @@ function get_current_user_id() {
 function get_current_user_role() {
     return $_SESSION['role'] ?? null;
 }
+
+/**
+ * Checks if a user is currently logged in.
+ * @return bool True if logged in, false otherwise.
+ */
+function is_logged_in() {
+    return isset($_SESSION['user_id']);
+}
+
+/**
+ * Checks if the current user is an admin.
+ * @return bool True if user is an admin, false otherwise.
+ */
+function is_admin() {
+    return isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+}
