@@ -1,213 +1,111 @@
 <?php
-// in file: create_admin.php
+// in file: htdocs/create_admin.php
 
-// --- IMPORTANT SECURITY WARNING ---
-// This script is a potential security risk.
-// It allows for the creation of an admin user without authentication.
-// YOU MUST DELETE THIS FILE FROM YOUR SERVER IMMEDIATELY AFTER USE.
-// --- --- --- --- --- --- --- --- ---
+require_once __DIR__ . '/app/bootstrap.php';
+
+// Check if an admin user already exists
+$stmt = $pdo->query("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
+$admin_exists = $stmt->fetch();
 
 $message = '';
-$message_type = '';
+$error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Include necessary files only when the form is submitted
-    require_once __DIR__ . '/app/core/database.php';
-
-    $full_name = trim($_POST['full_name'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
-
-    if (empty($full_name) || empty($email) || empty($password)) {
-        $message = 'All fields are required.';
-        $message_type = 'error';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $message = 'Please enter a valid email address.';
-        $message_type = 'error';
+    if ($admin_exists) {
+        $error = 'An admin account already exists. This script is disabled for security reasons.';
     } else {
-        try {
-            // Check if user already exists
+        $full_name = sanitize_input($_POST['full_name']);
+        $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
+        $password = $_POST['password'];
+
+        if (empty($full_name) || empty($email) || empty($password)) {
+            $error = "All fields are required.";
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $error = "Invalid email format.";
+        } else {
+            // Check if email already exists
             $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
             $stmt->execute([$email]);
             if ($stmt->fetch()) {
-                $message = "An account with this email address already exists.";
-                $message_type = 'error';
+                $error = "An account with this email already exists.";
             } else {
-                // Hash the password
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-                // Insert the new admin user
-                $stmt = $pdo->prepare(
-                    "INSERT INTO users (full_name, email, password, role) VALUES (?, ?, ?, 'admin')"
-                );
-                $stmt->execute([$full_name, $email, $hashed_password]);
+                $sql = "INSERT INTO users (full_name, email, password, role, is_active, must_change_password) VALUES (?, ?, ?, 'admin', 1, 0)";
+                $stmt = $pdo->prepare($sql);
 
-                $message = "Admin user '" . htmlspecialchars($full_name) . "' created successfully. <strong>Please delete this file now!</strong>";
-                $message_type = 'success';
+                if ($stmt->execute([$full_name, $email, $hashed_password])) {
+                    $message = "Admin user created successfully! <strong>Please delete this file (create_admin.php) immediately for security.</strong> You can now <a href='login.php'>log in</a>.";
+                    // Re-check admin existence to disable the form
+                    $admin_exists = true; 
+                } else {
+                    $error = "Failed to create admin user. Please check logs.";
+                }
             }
-        } catch (PDOException $e) {
-            $message = "Database error: " . $e->getMessage();
-            $message_type = 'error';
         }
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Admin User</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        h1 { text-align: center; color: #333; }
-        .warning { background-color: #ffc107; color: #333; padding: 15px; border-radius: 5px; text-align: center; font-weight: bold; margin-bottom: 20px; border: 1px solid #e0a800;}
-        .message { padding: 15px; margin-bottom: 20px; border-radius: 5px; text-align: center; }
-        .message.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .message.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], input[type="email"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
-        button:hover { background-color: #0056b3; }
-    </style>
+    <title>Create Initial Admin User</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
-    <div class="container">
-        <h1>Create Initial Admin User</h1>
-        <div class="warning">
-            SECURITY RISK: Delete this file (<code>create_admin.php</code>) immediately after use.
+<body class="bg-light">
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-sm mt-5">
+                <div class="card-body p-4">
+                    <h1 class="h3 mb-3 fw-normal text-center">Create Initial Admin</h1>
+                    <p class="text-center text-muted">Use this form only once to create the first administrator account.</p>
+                    
+                    <?php if ($message): ?>
+                        <div class="alert alert-success"><?= $message ?></div>
+                    <?php endif; ?>
+                    <?php if ($error): ?>
+                        <div class="alert alert-danger"><?= $error ?></div>
+                    <?php endif; ?>
+
+                    <?php if (!$admin_exists): ?>
+                        <form action="create_admin.php" method="POST" novalidate>
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control" id="full_name" name="full_name" placeholder="John Doe" required>
+                                <label for="full_name">Full Name</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" required>
+                                <label for="email">Email address</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+                                <label for="password">Password</label>
+                            </div>
+
+                            <button class="w-100 btn btn-lg btn-primary" type="submit">Create Admin</button>
+                        </form>
+                    <?php else: ?>
+                        <div class="alert alert-warning text-center">
+                            <p><i class="bi bi-exclamation-triangle-fill"></i> <strong>Script Disabled</strong></p>
+                            An admin account already exists. For security, this script cannot be used again.
+                            <br><br>
+                            <strong>You MUST delete this file from the server now.</strong>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <p class="mt-4 mb-1 text-center text-muted">&copy; <?= date('Y') ?> HR Portal</p>
+                </div>
+            </div>
         </div>
-
-        <?php if ($message): ?>
-            <div class="message <?php echo $message_type; ?>">
-                <?php echo $message; ?>
-            </div>
-        <?php endif; ?>
-
-        <form action="create_admin.php" method="post">
-            <div class="form-group">
-                <label for="full_name">Full Name</label>
-                <input type="text" id="full_name" name="full_name" required>
-            </div>
-            <div class="form-group">
-                <label for="email">Email Address</label>
-                <input type="email" id="email" name="email" required>
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <button type="submit">Create Admin</button>
-        </form>
     </div>
-</body>
-</html><?php
-// in file: create_admin.php
+</div>
 
-// --- IMPORTANT SECURITY WARNING ---
-// This script is a potential security risk.
-// It allows for the creation of an admin user without authentication.
-// YOU MUST DELETE THIS FILE FROM YOUR SERVER IMMEDIATELY AFTER USE.
-// --- --- --- --- --- --- --- --- ---
-
-$message = '';
-$message_type = '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Include necessary files only when the form is submitted
-    require_once __DIR__ . '/app/core/database.php';
-
-    $full_name = trim($_POST['full_name'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
-
-    if (empty($full_name) || empty($email) || empty($password)) {
-        $message = 'All fields are required.';
-        $message_type = 'error';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $message = 'Please enter a valid email address.';
-        $message_type = 'error';
-    } else {
-        try {
-            // Check if user already exists
-            $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
-            $stmt->execute([$email]);
-            if ($stmt->fetch()) {
-                $message = "An account with this email address already exists.";
-                $message_type = 'error';
-            } else {
-                // Hash the password
-                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
-                // Insert the new admin user
-                $stmt = $pdo->prepare(
-                    "INSERT INTO users (full_name, email, password, role) VALUES (?, ?, ?, 'admin')"
-                );
-                $stmt->execute([$full_name, $email, $hashed_password]);
-
-                $message = "Admin user '" . htmlspecialchars($full_name) . "' created successfully. <strong>Please delete this file now!</strong>";
-                $message_type = 'success';
-            }
-        } catch (PDOException $e) {
-            $message = "Database error: " . $e->getMessage();
-            $message_type = 'error';
-        }
-    }
-}
-?>
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Admin User</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        h1 { text-align: center; color: #333; }
-        .warning { background-color: #ffc107; color: #333; padding: 15px; border-radius: 5px; text-align: center; font-weight: bold; margin-bottom: 20px; border: 1px solid #e0a800;}
-        .message { padding: 15px; margin-bottom: 20px; border-radius: 5px; text-align: center; }
-        .message.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .message.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], input[type="email"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
-        button:hover { background-color: #0056b3; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Create Initial Admin User</h1>
-        <div class="warning">
-            SECURITY RISK: Delete this file (<code>create_admin.php</code>) immediately after use.
-        </div>
-
-        <?php if ($message): ?>
-            <div class="message <?php echo $message_type; ?>">
-                <?php echo $message; ?>
-            </div>
-        <?php endif; ?>
-
-        <form action="create_admin.php" method="post">
-            <div class="form-group">
-                <label for="full_name">Full Name</label>
-                <input type="text" id="full_name" name="full_name" required>
-            </div>
-            <div class="form-group">
-                <label for="email">Email Address</label>
-                <input type="email" id="email" name="email" required>
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <button type="submit">Create Admin</button>
-        </form>
-    </div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

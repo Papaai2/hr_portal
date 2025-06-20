@@ -3,7 +3,7 @@
 
 require_once __DIR__ . '/app/core/auth.php';
 require_once __DIR__ . '/app/core/database.php';
-require_once __DIR__ . '/app/core/helpers.php'; // Added this line
+require_once __DIR__ . '/app/core/helpers.php';
 
 require_login();
 
@@ -14,6 +14,7 @@ $pending_hr_requests = [];
 $hr_view_pending_manager = [];
 
 $my_leave_balances = [];
+// FIX: The column name was corrected from `lb.balance` to `lb.balance_days` to match the database schema.
 $stmt_my_balances = $pdo->prepare("
     SELECT lb.balance_days, lt.name AS leave_type_name
     FROM leave_balances lb
@@ -58,7 +59,6 @@ if ($user_role === 'hr' || $user_role === 'admin' || $user_role === 'hr_manager'
     $hr_view_pending_manager = $stmt_hr_view->fetchAll();
 }
 
-// The getStatusBadgeClass() and getStatusText() functions were removed from here.
 
 $page_title = 'Dashboard';
 include __DIR__ . '/app/templates/header.php';
