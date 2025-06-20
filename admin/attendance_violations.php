@@ -26,11 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             case 'swap_state':
                 if (!$log_id) throw new Exception("Invalid Log ID.");
                 $update_note = "State swapped. " . $note;
-                // This flips punch_state (0->1, 1->0) and marks the record as corrected
                 $stmt = $pdo->prepare(
-                    "UPDATE attendance_logs 
-                     SET punch_state = 1 - punch_state, status = 'corrected', violation_type = NULL, notes = ? 
-                     WHERE id = ?"
+                    "UPDATE attendance_logs SET punch_state = 1 - punch_state, status = 'corrected', violation_type = NULL, notes = ? WHERE id = ?"
                 );
                 $stmt->execute([$update_note, $log_id]);
                 $success_message = "Punch record #{$log_id} state has been swapped.";
@@ -44,13 +41,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$user_id || empty($punch_time) || !in_array($punch_state, [0, 1])) {
                     throw new Exception("All fields are required to add a punch.");
                 }
+
+                $userStmt = $pdo->prepare("SELECT employee_code FROM users WHERE id = ?");
+                $userStmt->execute([$user_id]);
+                $employee_code = $userStmt->fetchColumn();
+
+                if (!$employee_code) {
+                    throw new Exception("Selected user does not have an employee code.");
+                }
+
                 $insert_note = "Manually added. " . $note;
+                // **FIXED**: Insert NULL for device_id on manual entries
                 $stmt = $pdo->prepare(
-                    "INSERT INTO attendance_logs (user_id, punch_time, punch_state, status, notes) 
-                     VALUES (?, ?, ?, 'corrected', ?)"
+                    "INSERT INTO attendance_logs (employee_code, punch_time, punch_state, status, notes, device_id) VALUES (?, ?, ?, 'corrected', ?, NULL)"
                 );
-                $stmt->execute([$user_id, $punch_time, $punch_state, $insert_note]);
-                $success_message = "Manual punch has been successfully added.";
+                $stmt->execute([$employee_code, $punch_time, $punch_state, $insert_note]);
+                $success_message = "Manual punch has been successfully added for employee #{$employee_code}.";
                 break;
             
             default:
@@ -65,19 +71,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
 // --- Fetch Data for Display ---
-
-// Fetch all logs that have been flagged as an error
 $stmt = $pdo->query(
     "SELECT al.*, u.full_name 
      FROM attendance_logs al 
-     JOIN users u ON al.user_id = u.id 
+     JOIN users u ON al.employee_code = u.employee_code 
      WHERE al.status = 'error' 
      ORDER BY al.punch_time DESC"
 );
 $violations = $stmt->fetchAll();
 
-// Fetch all active users for the "Add Punch" dropdown
-$user_stmt = $pdo->query("SELECT id, full_name FROM users WHERE is_active = 1 ORDER BY full_name ASC");
+$user_stmt = $pdo->query("SELECT id, full_name, employee_code FROM users WHERE is_active = 1 AND employee_code IS NOT NULL AND employee_code != '' ORDER BY full_name ASC");
 $users = $user_stmt->fetchAll();
 
 
@@ -87,20 +90,11 @@ include __DIR__ . '/../app/templates/header.php';
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h3 mb-0"><?php echo htmlspecialchars($page_title); ?></h1>
 </div>
-
 <p>Review and resolve illogical or automatically flagged attendance punches. Corrected punches will be used in reports.</p>
-
-<?php if ($success_message): ?>
-    <div class="alert alert-success"><?php echo htmlspecialchars($success_message); ?></div>
-<?php endif; ?>
-<?php if ($error_message): ?>
-    <div class="alert alert-danger"><?php echo htmlspecialchars($error_message); ?></div>
-<?php endif; ?>
-
+<?php if ($success_message): ?><div class="alert alert-success"><?php echo htmlspecialchars($success_message); ?></div><?php endif; ?>
+<?php if ($error_message): ?><div class="alert alert-danger"><?php echo htmlspecialchars($error_message); ?></div><?php endif; ?>
 <div class="card mb-4">
-    <div class="card-header">
-        <h5 class="card-title mb-0"><i class="bi bi-plus-circle me-2"></i>Add Missing Punch</h5>
-    </div>
+    <div class="card-header"><h5 class="card-title mb-0"><i class="bi bi-plus-circle me-2"></i>Add Missing Punch</h5></div>
     <div class="card-body">
         <form action="attendance_violations.php" method="POST" class="row g-3 align-items-end">
             <input type="hidden" name="action" value="add_punch">
@@ -109,7 +103,7 @@ include __DIR__ . '/../app/templates/header.php';
                 <select name="user_id" id="user_id" class="form-select" required>
                     <option value="">Select Employee...</option>
                     <?php foreach ($users as $user): ?>
-                        <option value="<?= $user['id'] ?>"><?= htmlspecialchars($user['full_name']) ?></option>
+                        <option value="<?= $user['id'] ?>"><?= htmlspecialchars($user['full_name'] . ' (' . $user['employee_code'] . ')') ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -134,24 +128,12 @@ include __DIR__ . '/../app/templates/header.php';
         </form>
     </div>
 </div>
-
-
 <div class="card">
-    <div class="card-header">
-        <h5 class="card-title mb-0"><i class="bi bi-exclamation-triangle-fill me-2"></i>Pending Violations</h5>
-    </div>
+    <div class="card-header"><h5 class="card-title mb-0"><i class="bi bi-exclamation-triangle-fill me-2"></i>Pending Violations</h5></div>
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Employee</th>
-                        <th>Punch Time</th>
-                        <th>Type</th>
-                        <th>Violation</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
+                <thead><tr><th>Employee</th><th>Punch Time</th><th>Type</th><th>Violation</th><th class="text-end">Actions</th></tr></thead>
                 <tbody>
                     <?php if (empty($violations)): ?>
                         <tr><td colspan="5" class="text-center text-muted">No pending violations found. Great job!</td></tr>

@@ -16,50 +16,46 @@ class AttendanceService
      * Processes a single raw punch. It determines the logical punch state (IN/OUT)
      * and flags it if it appears to be a violation (e.g., a double punch).
      *
-     * @param integer $userId The ID of the user punching.
+     * @param string $employeeCode The Employee Code from the machine/log.
      * @param string $punchTime The timestamp of the punch.
+     * @param int $deviceId The ID of the device sending the punch.
      * @return boolean True on successful save, false otherwise.
      */
-    public function processPunch(int $userId, string $punchTime): bool
+    public function processPunch(string $employeeCode, string $punchTime, int $deviceId): bool
     {
         $punchDate = (new DateTime($punchTime))->format('Y-m-d');
         
         // Get the last VALID punch to determine the next logical state.
-        $lastValidPunch = $this->getLastValidPunchForDay($userId, $punchDate);
+        $lastValidPunch = $this->getLastValidPunchForDay($employeeCode, $punchDate);
         
-        $expectedState = self::PUNCH_IN; // By default, the first punch of the day is IN.
+        $expectedState = self::PUNCH_IN;
         $violation = null;
 
         if ($lastValidPunch) {
-            // A previous valid punch exists, so we expect the opposite state.
             $expectedState = ($lastValidPunch['punch_state'] == self::PUNCH_IN) ? self::PUNCH_OUT : self::PUNCH_IN;
 
-            // VIOLATION CHECK 1: Is this new punch happening too soon after the last one?
             $secondsSinceLast = (new DateTime($punchTime))->getTimestamp() - (new DateTime($lastValidPunch['punch_time']))->getTimestamp();
-            if ($secondsSinceLast < 60) { // Cooldown of 1 minute.
+            if ($secondsSinceLast < 60) {
                 $violation = 'double_punch';
             }
         }
         
-        // A nightly or weekly script could be added to run more complex violation checks,
-        // such as finding an IN without a matching OUT for a whole day and flagging it 'missing_out_punch'.
-
-        return $this->savePunch($userId, $punchTime, $expectedState, $violation);
+        return $this->savePunch($employeeCode, $punchTime, $expectedState, $deviceId, $violation);
     }
 
     /**
      * Saves a batch of standardized logs from a device by processing each one.
      *
      * @param array $logs An array of log entries.
+     * @param int $deviceId The ID of the device these logs came from.
      * @return integer The number of logs successfully saved.
      */
-    public function saveStandardizedLogs(array $logs): int
+    public function saveStandardizedLogs(array $logs, int $deviceId): int
     {
         $savedCount = 0;
         foreach ($logs as $log) {
-            // Ensure required keys exist before processing
             if (isset($log['employee_code']) && isset($log['punch_time'])) {
-                if ($this->processPunch((int)$log['employee_code'], $log['punch_time'])) {
+                if ($this->processPunch($log['employee_code'], $log['punch_time'], $deviceId)) {
                     $savedCount++;
                 }
             }
@@ -68,50 +64,48 @@ class AttendanceService
     }
 
     /**
-     * Fetches the last non-error punch for a given user on a specific date.
-     * This is used to determine the logical sequence of punches.
+     * Fetches the last non-error punch for a given employee on a specific date.
      *
-     * @param integer $userId
+     * @param string $employeeCode
      * @param string $punchDate
      * @return array|null The last valid punch record, or null if none exists.
      */
-    private function getLastValidPunchForDay(int $userId, string $punchDate): ?array
+    private function getLastValidPunchForDay(string $employeeCode, string $punchDate): ?array
     {
-        // Notice we only look for punches that are NOT already flagged as an error.
+        // **FIXED**: Query uses employee_code instead of user_id.
         $stmt = $this->pdo->prepare(
             "SELECT * FROM attendance_logs 
-             WHERE user_id = ? AND DATE(punch_time) = ? AND status != 'error'
+             WHERE employee_code = ? AND DATE(punch_time) = ? AND status != 'error'
              ORDER BY punch_time DESC 
              LIMIT 1"
         );
-        $stmt->execute([$userId, $punchDate]);
+        $stmt->execute([$employeeCode, $punchDate]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result ?: null;
     }
 
     /**
-     * Saves a validated punch record into the database, including its status and any violation type.
+     * Saves a validated punch record into the database.
      *
-     * @param integer $userId
+     * @param string $employeeCode
      * @param string $punchTime
      * @param integer $punchState
+     * @param integer $deviceId
      * @param string|null $violationType
-     * @param integer|null $deviceId (Kept for future use)
      * @return boolean True on success, false on failure.
      */
-    private function savePunch(int $userId, string $punchTime, int $punchState, ?string $violationType, ?int $deviceId = null): bool
+    private function savePunch(string $employeeCode, string $punchTime, int $punchState, int $deviceId, ?string $violationType): bool
     {
-        // If there's a violation, the status is 'error'. Otherwise, it's 'unprocessed' and needs to be paired later.
         $status = ($violationType === null) ? 'unprocessed' : 'error';
 
-        $sql = "INSERT INTO attendance_logs (user_id, punch_time, punch_state, device_id, status, violation_type) 
+        // **FIXED**: Inserts into employee_code instead of user_id.
+        $sql = "INSERT INTO attendance_logs (employee_code, punch_time, punch_state, device_id, status, violation_type) 
                 VALUES (?, ?, ?, ?, ?, ?)";
         
         try {
             $stmt = $this->pdo->prepare($sql);
-            return $stmt->execute([$userId, $punchTime, $punchState, $deviceId, $status, $violationType]);
+            return $stmt->execute([$employeeCode, $punchTime, $punchState, $deviceId, $status, $violationType]);
         } catch (PDOException $e) {
-            // Log error, maybe duplicate punch attempt if you have a unique constraint
             error_log("Failed to save punch: " . $e->getMessage());
             return false;
         }
