@@ -77,12 +77,12 @@ $total_pages = ceil($total_logs / $page_size);
                 <?php else: ?>
                     <?php foreach ($audit_logs as $log): ?>
                         <tr>
-                            <td><?= htmlspecialchars($log['id']) ?></td>
-                            <td><?= htmlspecialchars($log['full_name'] ?? 'Unknown') ?> (ID: <?= htmlspecialchars($log['user_id']) ?>)</td>
-                            <td><?= htmlspecialchars($log['action']) ?></td>
-                            <td style="max-width:300px; word-break:break-word; white-space:pre-wrap;"><?= htmlspecialchars($log['details']) ?></td>
-                            <td><?= htmlspecialchars($log['ip_address']) ?></td>
-                            <td><?= htmlspecialchars($log['created_at']) ?></td>
+                            <td><?= htmlspecialchars($log['id'] ?? '') ?></td>
+                            <td><?= htmlspecialchars($log['full_name'] ?? 'Unknown') ?> (ID: <?= htmlspecialchars($log['user_id'] ?? '') ?>)</td>
+                            <td><?= htmlspecialchars($log['action'] ?? '') ?></td>
+                            <td style="max-width:300px; word-break:break-word; white-space:pre-wrap;"><?= htmlspecialchars($log['details'] ?? '') ?></td>
+                            <td><?= htmlspecialchars($log['ip_address'] ?? '') ?></td>
+                            <td><?= htmlspecialchars($log['created_at'] ?? '') ?></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
