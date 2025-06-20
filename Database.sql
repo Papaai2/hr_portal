@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 20, 2025 at 11:52 PM
+-- Generation Time: Jun 21, 2025 at 12:36 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -46,17 +46,6 @@ CREATE TABLE `attendance_logs` (
 --
 
 TRUNCATE TABLE `attendance_logs`;
---
--- Dumping data for table `attendance_logs`
---
-
-INSERT INTO `attendance_logs` (`id`, `device_id`, `employee_code`, `punch_time`, `expected_in`, `expected_out`, `punch_state`, `status`, `violation_type`, `notes`, `created_at`) VALUES
-(1, 1, 'ENG-001', '2025-06-21 08:59:10', NULL, NULL, 0, 'unprocessed', NULL, NULL, '2025-06-20 20:29:02'),
-(2, 1, 'ENG-002', '2025-06-21 09:03:25', NULL, NULL, 0, 'unprocessed', NULL, NULL, '2025-06-20 20:29:02'),
-(3, 1, 'HR-001', '2025-06-21 08:45:50', NULL, NULL, 0, 'unprocessed', NULL, NULL, '2025-06-20 20:29:02'),
-(4, 1, 'ENG-001', '2025-06-21 18:05:15', NULL, NULL, 1, 'unprocessed', NULL, NULL, '2025-06-20 20:29:02'),
-(5, 1, 'ENG-002', '2025-06-21 18:10:00', NULL, NULL, 1, 'unprocessed', NULL, NULL, '2025-06-20 20:29:02');
-
 -- --------------------------------------------------------
 
 --
@@ -88,7 +77,16 @@ INSERT INTO `audit_logs` (`id`, `user_id`, `action`, `details`, `ip_address`, `c
 (4, 2, 'REQUEST_REJECT', 'User HR Manager rejected leave request #4.', '127.0.0.1', '2025-06-20 20:29:02'),
 (5, 1, 'add_shift', '{\"name\":\"Fixed\"}', '127.0.0.1', '2025-06-20 21:39:11'),
 (6, 6, 'cancel_request', '{\"request_id\":5,\"status\":\"cancelled\"}', '127.0.0.1', '2025-06-20 21:47:59'),
-(7, 4, 'approve_request_manager', '{\"request_id\":6,\"status\":\"pending_hr\"}', '127.0.0.1', '2025-06-20 21:50:03');
+(7, 4, 'approve_request_manager', '{\"request_id\":6,\"status\":\"pending_hr\"}', '127.0.0.1', '2025-06-20 21:50:03'),
+(8, 4, 'add_request_comment', '{\"request_id\":6,\"comment\":\"X\"}', '127.0.0.1', '2025-06-20 21:53:35'),
+(9, 2, 'approve_request_hr', '{\"request_id\":6,\"status\":\"approved\"}', '127.0.0.1', '2025-06-20 21:54:57'),
+(10, 2, 'add_request_comment', '{\"request_id\":6,\"comment\":\"Congrats\"}', '127.0.0.1', '2025-06-20 21:55:00'),
+(11, 1, 'update_device', '{\"device_id\":\"2\",\"name\":\"TRy 1\",\"ip_address\":\"127.0.0.1\",\"port\":\"4370\",\"device_type\":\"ZKTeco\"}', '127.0.0.1', '2025-06-20 22:06:50'),
+(12, 1, 'delete_device', '{\"device_id\":3}', '127.0.0.1', '2025-06-20 22:12:28'),
+(13, 1, 'add_device', '{\"device_id\":\"\",\"name\":\"TRy 2\",\"ip_address\":\"127.0.0.1\",\"port\":\"4370\",\"device_brand\":\"Fingertec\"}', '127.0.0.1', '2025-06-20 22:12:34'),
+(14, 1, 'update_device', '{\"device_id\":\"2\",\"name\":\"TRy 1\",\"ip_address\":\"127.0.0.1\",\"port\":\"4371\",\"device_brand\":\"ZKTeco\"}', '127.0.0.1', '2025-06-20 22:28:14'),
+(15, 1, 'update_device', '{\"device_id\":\"4\",\"name\":\"TRy 2\",\"ip_address\":\"127.0.0.1\",\"port\":\"4371\",\"device_brand\":\"Fingertec\"}', '127.0.0.1', '2025-06-20 22:33:20'),
+(16, 1, 'update_device', '{\"device_id\":\"4\",\"name\":\"TRy 2\",\"ip_address\":\"127.0.0.1\",\"port\":\"4370\",\"device_brand\":\"Fingertec\"}', '127.0.0.1', '2025-06-20 22:33:25');
 
 -- --------------------------------------------------------
 
@@ -127,6 +125,7 @@ CREATE TABLE `devices` (
   `name` varchar(255) NOT NULL COMMENT 'A user-friendly name, e.g., "Main Entrance"',
   `ip_address` varchar(45) NOT NULL COMMENT 'IP for PULL mode, reference for PUSH mode',
   `port` int(11) NOT NULL DEFAULT 4370,
+  `device_type` varchar(50) NOT NULL DEFAULT 'ZKTeco',
   `device_brand` varchar(50) NOT NULL COMMENT 'The driver to use, e.g., fingertec, zkteco',
   `serial_number` varchar(100) DEFAULT NULL,
   `communication_key` varchar(255) DEFAULT '0' COMMENT 'Device password, if any',
@@ -145,8 +144,9 @@ TRUNCATE TABLE `devices`;
 -- Dumping data for table `devices`
 --
 
-INSERT INTO `devices` (`id`, `name`, `ip_address`, `port`, `device_brand`, `serial_number`, `communication_key`, `is_active`, `last_sync_timestamp`, `created_at`, `updated_at`) VALUES
-(1, 'Main Entrance Device', '192.168.1.201', 4370, 'zkteco', 'ZK-12345ABC', '0', 1, NULL, '2025-06-20 20:27:27', '2025-06-20 20:27:27');
+INSERT INTO `devices` (`id`, `name`, `ip_address`, `port`, `device_type`, `device_brand`, `serial_number`, `communication_key`, `is_active`, `last_sync_timestamp`, `created_at`, `updated_at`) VALUES
+(2, 'TRy 1', '127.0.0.1', 4371, 'ZKTeco', 'ZKTeco', 'TEST-SN-12345', '0', 1, NULL, '2025-06-20 22:01:03', '2025-06-20 22:28:14'),
+(4, 'TRy 2', '127.0.0.1', 4370, 'ZKTeco', 'Fingertec', NULL, '0', 1, NULL, '2025-06-20 22:12:34', '2025-06-20 22:33:25');
 
 -- --------------------------------------------------------
 
@@ -181,7 +181,7 @@ INSERT INTO `leave_balances` (`id`, `user_id`, `leave_type_id`, `balance_days`, 
 (6, 4, 2, 7, '2025-06-20 20:29:02', NULL),
 (7, 5, 1, 16, '2025-06-20 20:30:11', NULL),
 (8, 5, 2, 7, '2025-06-20 20:29:02', NULL),
-(9, 6, 1, 19, '2025-06-20 20:31:55', NULL),
+(9, 6, 1, 18, '2025-06-20 21:54:57', NULL),
 (10, 6, 2, 7, '2025-06-20 20:29:02', NULL),
 (11, 7, 1, 15, '2025-06-20 20:29:02', NULL),
 (12, 7, 2, 5, '2025-06-20 20:29:02', NULL);
@@ -259,7 +259,13 @@ INSERT INTO `notifications` (`id`, `user_id`, `message`, `is_read`, `request_id`
 (19, 2, 'New request submitted by Junior Engineer, awaiting manager review.', 0, 6, '2025-06-20 21:49:28'),
 (20, 3, 'New request submitted by Junior Engineer, awaiting manager review.', 0, 6, '2025-06-20 21:49:28'),
 (21, 2, 'Leave request for Junior Engineer (ID: 6) has been approved by their manager.', 0, 6, '2025-06-20 21:50:03'),
-(22, 6, 'Your leave request (#6) has been approved by your manager.', 0, 6, '2025-06-20 21:50:03');
+(22, 6, 'Your leave request (#6) has been approved by your manager.', 0, 6, '2025-06-20 21:50:03'),
+(23, 6, 'A comment was added to your request (#6).', 0, 6, '2025-06-20 21:53:35'),
+(24, 2, 'A comment was added to request (#6) for Junior Engineer.', 0, 6, '2025-06-20 21:53:35'),
+(25, 6, 'Your leave request (#6) has been fully approved by HR.', 0, 6, '2025-06-20 21:54:57'),
+(26, 4, 'Leave request for Junior Engineer (#6) has been fully approved by HR.', 0, 6, '2025-06-20 21:54:57'),
+(27, 6, 'A comment was added to your request (#6).', 0, 6, '2025-06-20 21:55:00'),
+(28, 4, 'A comment was added to a team request (#6) for Junior Engineer.', 0, 6, '2025-06-20 21:55:00');
 
 -- --------------------------------------------------------
 
@@ -304,7 +310,9 @@ TRUNCATE TABLE `request_comments`;
 --
 
 INSERT INTO `request_comments` (`id`, `request_id`, `user_id`, `comment`, `created_at`) VALUES
-(1, 4, 2, 'Project deadline during this period. Please reschedule.', '2025-06-21 12:00:00');
+(1, 4, 2, 'Project deadline during this period. Please reschedule.', '2025-06-21 12:00:00'),
+(2, 6, 4, 'X', '2025-06-20 21:53:35'),
+(3, 6, 2, 'Congrats', '2025-06-20 21:55:00');
 
 -- --------------------------------------------------------
 
@@ -416,7 +424,7 @@ INSERT INTO `vacation_requests` (`id`, `user_id`, `start_date`, `end_date`, `dur
 (3, 4, '2025-09-15', '2025-09-15', NULL, 'Personal day.', NULL, 'approved', 2, '2025-06-19 11:00:00', 2, '2025-06-20 13:00:00', NULL, '2025-06-19 09:00:00'),
 (4, 3, '2025-07-20', '2025-07-21', NULL, 'Conference.', 2, 'rejected', 1, '2025-06-21 12:00:00', NULL, NULL, 'Project deadline during this period. Please reschedule.', '2025-06-21 11:00:00'),
 (5, 6, '2025-06-28', '2025-06-28', NULL, 'XX', 4, 'cancelled', 1, NULL, NULL, NULL, NULL, '2025-06-20 21:47:28'),
-(6, 6, '2025-06-21', '2025-06-21', 1, 'Test', 4, 'pending_hr', 1, NULL, NULL, NULL, NULL, '2025-06-20 21:49:28');
+(6, 6, '2025-06-21', '2025-06-21', 1, 'Test', 4, 'approved', 1, NULL, NULL, NULL, NULL, '2025-06-20 21:49:28');
 
 --
 -- Indexes for dumped tables
@@ -532,7 +540,7 @@ ALTER TABLE `attendance_logs`
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `departments`
@@ -544,7 +552,7 @@ ALTER TABLE `departments`
 -- AUTO_INCREMENT for table `devices`
 --
 ALTER TABLE `devices`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `leave_balances`
@@ -562,7 +570,7 @@ ALTER TABLE `leave_types`
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- AUTO_INCREMENT for table `request_attachments`
@@ -574,7 +582,7 @@ ALTER TABLE `request_attachments`
 -- AUTO_INCREMENT for table `request_comments`
 --
 ALTER TABLE `request_comments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `shifts`

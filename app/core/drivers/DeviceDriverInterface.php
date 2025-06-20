@@ -1,4 +1,5 @@
 <?php
+// in file: app/core/drivers/DeviceDriverInterface.php
 
 /**
  * Interface DeviceDriverInterface
@@ -36,23 +37,40 @@ interface DeviceDriverInterface
      * Retrieves a list of all users registered on the device.
      *
      * @return array An array of users. Each user should be an associative array
-     * with a standardized format, e.g.:
-     * [
-     * ['employee_code' => '101', 'name' => 'John Doe', 'role' => 'User'],
-     * ['employee_code' => '102', 'name' => 'Jane Smith', 'role' => 'Admin']
-     * ]
+     * with a standardized format.
      */
     public function getUsers(): array;
 
     /**
      * Retrieves all new attendance logs from the device.
      *
-     * @return array An array of attendance logs. Each log should be an associative array
-     * with a standardized format, e.g.:
-     * [
-     * ['employee_code' => '101', 'punch_time' => '2023-10-27 09:00:00', 'punch_state' => 0],
-     * ['employee_code' => '101', 'punch_time' => '2023-10-27 17:30:00', 'punch_state' => 1]
-     * ]
+     * @return array An array of attendance logs in a standardized format.
      */
     public function getAttendanceLogs(): array;
+
+    /**
+     * Adds a new user to the device.
+     *
+     * @param array $userData Associative array containing user data, e.g.,
+     * ['employee_code' => '103', 'name' => 'Peter Jones', 'password' => '', 'card' => '']
+     * @return bool True on success, false on failure.
+     */
+    public function addUser(array $userData): bool;
+
+    /**
+     * Updates an existing user's information on the device.
+     *
+     * @param string $employee_code The employee code of the user to update.
+     * @param array $userData Associative array with the data to update.
+     * @return bool True on success, false on failure.
+     */
+    public function updateUser(string $employee_code, array $userData): bool;
+
+    /**
+     * Deletes a user from the device.
+     *
+     * @param string $employee_code The employee code of the user to delete.
+     * @return bool True on success, false on failure.
+     */
+    public function deleteUser(string $employee_code): bool;
 }

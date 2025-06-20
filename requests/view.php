@@ -140,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             case 'add_comment':
                 if (!empty($comment_text)) {
-                    $stmt_comment = $pdo->prepare("INSERT INTO request_comments (request_id, user_id, comment_text) VALUES (?, ?, ?)");
+                    $stmt_comment = $pdo->prepare("INSERT INTO request_comments (request_id, user_id, comment) VALUES (?, ?, ?)");
                     $stmt_comment->execute([$request_id, $current_user_id, $comment_text]);
                     
                     // Notify involved parties
@@ -296,7 +296,7 @@ include __DIR__ . '/../app/templates/header.php';
                         <small class="text-muted d-block">
                             <strong><?= htmlspecialchars($comment['commenter_name']) ?> (<?= htmlspecialchars(ucfirst($comment['commenter_role'])) ?>)</strong> on <?= date('M d, Y H:i A', strtotime($comment['created_at'])) ?>
                         </small>
-                        <p class="mb-0"><?= nl2br(htmlspecialchars($comment['comment_text'])) ?></p>
+                        <p class="mb-0"><?= nl2br(htmlspecialchars($comment['comment'] ?? '')) ?></p>
                     </li>
                 <?php endforeach; ?>
             </ul>

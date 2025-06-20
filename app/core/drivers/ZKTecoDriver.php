@@ -1,16 +1,18 @@
 <?php
+// in file: app/core/drivers/ZKTecoDriver.php
 
-require_once __DIR__ . '/lib/fingertec/TAD_PHP_Library.php';
+require_once __DIR__ . '/lib/zkteco/ZKTeco.php'; 
+require_once __DIR__ . '/DeviceDriverInterface.php';
 
 class ZKTecoDriver implements DeviceDriverInterface
 {
-    private ?TAD $connection = null;
+    private ?ZKTeco $connection = null;
 
     public function connect(string $ip, int $port, ?string $key = null): bool
     {
         try {
-            $this->connection = @new TAD($ip, $port);
-            if ($this->connection && $this->connection->get_version()) {
+            $this->connection = new ZKTeco($ip, $port);
+            if ($this->connection->connect()) {
                 return true;
             }
         } catch (Exception $e) {
@@ -30,66 +32,34 @@ class ZKTecoDriver implements DeviceDriverInterface
 
     public function getDeviceName(): string
     {
-        if (!$this->connection) {
-            return '';
-        }
-        $version = $this->connection->get_version();
-        return is_string($version) ? trim($version) : 'ZKTeco Device';
+        return $this->connection ? $this->connection->getVersion() : 'ZKTeco Device';
     }
-
 
     public function getAttendanceLogs(): array
     {
-        if (!$this->connection) {
-            return [];
-        }
-        $standardizedLogs = [];
-        $rawLogs = $this->connection->get_attendance_log();
-        if (is_array($rawLogs)) {
-            foreach ($rawLogs as $log) {
-                if (isset($log['userid'], $log['timestamp'], $log['type'])) {
-                    $punch_state = $this->mapDeviceStatusToPunchState($log['type']);
-                    $standardizedLogs[] = [
-                        'employee_code' => (string)$log['userid'],
-                        'punch_time'    => date('Y-m-d H:i:s', $log['timestamp']),
-                        'punch_state'   => $punch_state
-                    ];
-                }
-            }
-        }
-        return $standardizedLogs;
+        return $this->connection ? $this->connection->getAttendance() : [];
     }
 
     public function getUsers(): array
     {
-        if (!$this->connection) {
-            return [];
-        }
-        $rawUsers = $this->connection->get_user_info();
-        if (!is_array($rawUsers)) {
-            return [];
-        }
-
-        $standardizedUsers = [];
-        foreach ($rawUsers as $employeeCode => $user) {
-             // Role mapping: 0=User, >0=Some form of Admin (e.g., 14 for Super Admin).
-            $role_text = ($user['role'] > 0) ? 'Admin' : 'User';
-            $standardizedUsers[] = [
-                'employee_code' => (string)$employeeCode,
-                'name'          => $user['name'],
-                'role'          => $role_text
-            ];
-        }
-        return $standardizedUsers;
+        return $this->connection ? $this->connection->getUser() : [];
     }
-    
-    private function mapDeviceStatusToPunchState(int $deviceStatus): int
+
+    public function addUser(array $userData): bool
     {
-        $out_states = [1, 2, 5];
-        if (in_array($deviceStatus, $out_states, true)) {
-            return 1;
-        } else {
-            return 0;
-        }
+        // This is a stub for a real implementation
+        return false;
+    }
+
+    public function updateUser(string $employee_code, array $userData): bool
+    {
+        // This is a stub for a real implementation
+        return false;
+    }
+
+    public function deleteUser(string $employee_code): bool
+    {
+         // This is a stub for a real implementation
+        return false;
     }
 }
