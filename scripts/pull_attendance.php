@@ -2,13 +2,14 @@
 // A script to be run automatically by a scheduler (e.g., cron job or Windows Task Scheduler)
 // It fetches new attendance logs from all active devices configured in the database.
 
+// --- Bootstrap the application ---
+require_once __DIR__ . '/../app/bootstrap.php';
+
+
 echo "=================================================\n";
 echo "HR Portal - Automatic Attendance Pull Service\n";
 echo "Timestamp: " . date('Y-m-d H:i:s') . "\n";
 echo "=================================================\n";
-
-// --- Bootstrap the application ---
-require_once __DIR__ . '/../app/bootstrap.php';
 
 // --- Include Device Drivers ---
 require_once APP_PATH . '/core/drivers/FingertecDriver.php';

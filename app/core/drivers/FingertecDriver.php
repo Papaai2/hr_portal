@@ -1,79 +1,91 @@
 <?php
 
-// Include the interface that this class is contracted to implement.
 require_once __DIR__ . '/DeviceDriverInterface.php';
+require_once __DIR__ . '/lib/fingertec/TAD_PHP_Library.php';
 
-// In a real implementation, you would include the manufacturer's library file here.
-// For example:
-// require_once __DIR__ . '/lib/fingertec/TADK.php';
-
-/**
- * Class FingertecDriver
- *
- * This is the driver implementation for Fingertec hardware.
- * It uses the manufacturer's specific SDK/library to communicate with the device
- * and translates the results into the standardized format required by the
- * DeviceDriverInterface.
- */
 class FingertecDriver implements DeviceDriverInterface
 {
-    /**
-     * @var mixed Holds the connection object or resource from the SDK.
-     */
-    private $connection = null;
+    private ?TAD $connection = null;
 
-    /**
-     * {@inheritdoc}
-     * This method will contain the specific code to connect to a Fingertec device.
-     */
-    public function connect(string $ip, int $port, string $key): bool
+    public function connect(string $ip, int $port, ?string $key = null): bool
     {
-        // Placeholder Logic for Sprint 1
-        // In Sprint 2, you would replace this with actual SDK calls, e.g.:
-        // $this->connection = new TADK($ip, $port);
-        // return $this->connection->connect($key);
-        return true; // Assume success for now
+        try {
+            // The key for FingerTec devices is often referred to as the "communication key"
+            // The TAD library might handle this as a session password or key.
+            // For this library version, we assume the key is not directly used in connection.
+            $this->connection = @new TAD($ip, $port);
+            
+            if ($this->connection && $this->connection->get_version()) {
+                return true;
+            }
+        } catch (Exception $e) {
+            error_log("FingerTec connection failed for IP {$ip}: " . $e->getMessage());
+        }
+        $this->connection = null;
+        return false;
     }
 
-    /**
-     * {@inheritdoc}
-     * This method will contain the specific code to disconnect from a Fingertec device.
-     */
     public function disconnect(): void
     {
-        // Placeholder Logic for Sprint 1
-        // In Sprint 2, you would replace this with actual SDK calls, e.g.:
-        // if ($this->connection) {
-        //     $this->connection->disconnect();
-        // }
-        $this->connection = null;
+        if ($this->connection) {
+            $this->connection->disconnect();
+            $this->connection = null;
+        }
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getDeviceName(): string
-    {
-        // Placeholder for Sprint 2 implementation
-        return "Fingertec Device (Not Implemented)";
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getUsers(): array
-    {
-        // Placeholder for Sprint 2 implementation
-        return [];
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function getAttendanceLogs(): array
     {
-        // Placeholder for Sprint 2 implementation
-        return [];
+        if (!$this->connection) {
+            return [];
+        }
+
+        $standardizedLogs = [];
+        $rawLogs = $this->connection->get_attendance_log();
+
+        if (is_array($rawLogs)) {
+            foreach ($rawLogs as $log) {
+                if (isset($log['userid'], $log['timestamp'], $log['type'])) {
+                    
+                    $punch_state = $this->mapDeviceStatusToPunchState($log['type']);
+
+                    $standardizedLogs[] = [
+                        'employee_code' => (string)$log['userid'],
+                        'punch_time'    => date('Y-m-d H:i:s', $log['timestamp']),
+                        'punch_state'   => $punch_state
+                    ];
+                }
+            }
+        }
+        return $standardizedLogs;
+    }
+
+    public function getUsers(): array
+    {
+        if (!$this->connection) {
+            return [];
+        }
+        return $this->connection->get_user_info();
+    }
+
+    /**
+     * Maps the raw status code from a device to a simple In (0) or Out (1).
+     *
+     * @param int $deviceStatus The raw status code from the device.
+     * @return int The standardized punch_state code (0 for In, 1 for Out).
+     */
+    private function mapDeviceStatusToPunchState(int $deviceStatus): int
+    {
+        // List of device codes that count as an "OUT" punch:
+        // 1 = Check-Out, 2 = Break-Out, 5 = Overtime-Out
+        $out_states = [1, 2, 5];
+
+        if (in_array($deviceStatus, $out_states, true)) {
+            // If the status is any kind of "Out", map it to Standard Check-Out.
+            return 1;
+        } else {
+            // Otherwise, any other status (0, 3, 4, and any unknowns)
+            // will be mapped to a standard Check-In.
+            return 0;
+        }
     }
 }
-

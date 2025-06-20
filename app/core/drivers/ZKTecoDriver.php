@@ -1,101 +1,38 @@
 <?php
 
-// Include the interface that this class is contracted to implement.
 require_once __DIR__ . '/DeviceDriverInterface.php';
-
-// Include the same library as the Fingertec driver, as it supports both brands.
 require_once __DIR__ . '/lib/fingertec/TAD_PHP_Library.php';
 
-/**
- * Class ZKTecoDriver
- *
- * This is the driver implementation for ZKTeco hardware.
- * It leverages the same underlying TAD_PHP_Library as the Fingertec driver,
- * showcasing the reusability of our architecture. It translates results into
- * the standardized format required by the DeviceDriverInterface.
- */
 class ZKTecoDriver implements DeviceDriverInterface
 {
-    /**
-     * @var TAD Holds the connection object from the TAD_PHP_Library.
-     */
-    private $connection = null;
+    private ?TAD $connection = null;
 
-    /**
-     * {@inheritdoc}
-     * This method uses the TAD_PHP_Library to connect to a ZKTeco device.
-     */
-    public function connect(string $ip, int $port, string $key): bool
+    public function connect(string $ip, int $port, ?string $key = null): bool
     {
         try {
-            $this->connection = new TAD($ip, $port);
-            return ($this->connection !== null);
+            // Suppress constructor errors, we will check the connection state
+            $this->connection = @new TAD($ip, $port);
+            // The TAD library connects in the constructor, but we can check the result.
+            // A simple way to verify is to try a basic command.
+            if ($this->connection && $this->connection->get_version()) {
+                return true;
+            }
         } catch (Exception $e) {
-            // In a production app, you would log this error to a file.
-            // error_log("ZKTeco connection failed for IP {$ip}: " . $e->getMessage());
-            return false;
+            // Connection failed
+            error_log("ZKTeco connection failed for IP {$ip}: " . $e->getMessage());
         }
+        $this->connection = null;
+        return false;
     }
 
-    /**
-     * {@inheritdoc}
-     * This method uses the TAD_PHP_Library to disconnect from a ZKTeco device.
-     */
     public function disconnect(): void
     {
         if ($this->connection) {
             $this->connection->disconnect();
+            $this->connection = null;
         }
-        $this->connection = null;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getDeviceName(): string
-    {
-        if ($this->connection) {
-            try {
-                $versionInfo = $this->connection->get_version();
-                return empty($versionInfo) ? "ZKTeco Device" : trim($versionInfo);
-            } catch (Exception $e) {
-                return "ZKTeco Device (Error)";
-            }
-        }
-        return "ZKTeco Device (Not Connected)";
-    }
-
-    /**
-     * {@inheritdoc}
-     * Fetches users from a ZKTeco device and standardizes the data format.
-     */
-    public function getUsers(): array
-    {
-        if (!$this->connection) {
-            return [];
-        }
-
-        $standardizedUsers = [];
-        $rawUsers = $this->connection->get_user_info();
-
-        if (is_array($rawUsers)) {
-            foreach ($rawUsers as $userid => $data) {
-                $standardizedUsers[] = [
-                    'employee_code' => (string)$userid,
-                    'name'          => $data['name'],
-                    // Standardizing role: ZKTeco devices often use '14' for an admin user.
-                    'role'          => ($data['role'] == 14) ? 'Admin' : 'User'
-                ];
-            }
-        }
-
-        return $standardizedUsers;
-    }
-
-    /**
-     * {@inheritdoc}
-     * Fetches attendance logs from a ZKTeco device and standardizes the data format.
-     */
     public function getAttendanceLogs(): array
     {
         if (!$this->connection) {
@@ -109,17 +46,52 @@ class ZKTecoDriver implements DeviceDriverInterface
             foreach ($rawLogs as $log) {
                 // Ensure we have the necessary keys before processing
                 if (isset($log['userid'], $log['timestamp'], $log['type'])) {
+                    
+                    // Map device-specific status to standardized punch_state
+                    $punch_state = $this->mapDeviceStatusToPunchState($log['type']);
+
                     $standardizedLogs[] = [
                         'employee_code' => (string)$log['userid'],
                         // Convert timestamp to a standard database-friendly format
                         'punch_time'    => date('Y-m-d H:i:s', $log['timestamp']),
-                        // The 'type' from the library directly maps to our punch_state
-                        'punch_state'   => $log['type']
+                        // Use the newly mapped, standardized punch_state
+                        'punch_state'   => $punch_state
                     ];
                 }
             }
         }
-        
         return $standardizedLogs;
+    }
+
+    public function getUsers(): array
+    {
+        if (!$this->connection) {
+            return [];
+        }
+        // This should call a method in the TAD library to get user info
+        // and then standardize it.
+        return $this->connection->get_user_info();
+    }
+
+    /**
+     * Maps the raw status code from a device to a simple In (0) or Out (1).
+     *
+     * @param int $deviceStatus The raw status code from the device.
+     * @return int The standardized punch_state code (0 for In, 1 for Out).
+     */
+    private function mapDeviceStatusToPunchState(int $deviceStatus): int
+    {
+        // List of device codes that count as an "OUT" punch:
+        // 1 = Check-Out, 2 = Break-Out, 5 = Overtime-Out
+        $out_states = [1, 2, 5];
+
+        if (in_array($deviceStatus, $out_states, true)) {
+            // If the status is any kind of "Out", map it to Standard Check-Out.
+            return 1;
+        } else {
+            // Otherwise, any other status (0, 3, 4, and any unknowns)
+            // will be mapped to a standard Check-In.
+            return 0;
+        }
     }
 }

@@ -67,9 +67,10 @@ class TAD
 
     public function disconnect()
     {
-        if ($this->_socket) {
+        if (is_resource($this->_socket)) {
             $this->_send_command(self::CMD_EXIT);
             socket_close($this->_socket);
+            $this->_socket = null;
         }
     }
 
@@ -114,31 +115,48 @@ class TAD
     public function get_attendance_log()
     {
         $this->_send_command(self::CMD_GET_ATTENDANCE);
-        $this->_data_recv = socket_read($this->_socket, 1024);
+        // Increase buffer size for real devices which can send a lot of data
+        $this->_data_recv = socket_read($this->_socket, 8192);
         $this->_last_response = $this->_data_recv;
 
-        if (strlen($this->_data_recv) > 0) {
+        if (strlen($this->_data_recv) > 8) {
             $this->_session_id = $this->_get_session_id();
-            $this->_data_recv = substr($this->_data_recv, 8);
+            $data_payload = substr($this->_data_recv, 8);
             $attendance = [];
             
-            while(strlen($this->_data_recv) > 15)
+            $record_size = 16; // Each attendance record from this device type is 16 bytes
+            while(strlen($data_payload) >= $record_size)
             {
-                $u = unpack('H*', $this->_data_recv);
-                $u = $u[1];
+                $hex_record = unpack('H*', substr($data_payload, 0, $record_size))[1];
 
-                $userid = hex2bin(substr($u, 0, 18));
-                $userid = substr($userid, 0, strpos($userid, "\0"));
+                // --- Correctly Parse the Binary Record ---
+                
+                // User ID: 9-byte, null-padded string (Bytes 0-8)
+                $userid = hex2bin(substr($hex_record, 0, 18));
+                $userid = trim($userid, "\0"); // Trim null characters for a clean ID
 
-                $timestamp = hexdec(substr($u, 8, 8));
-                $type = hexdec(substr($u, 6, 2));
+                // Punch Type: 1 byte (Byte 9)
+                $type = hexdec(substr($hex_record, 18, 2));
 
-                $attendance[] = [
-                    'userid' => $userid,
-                    'timestamp' => $timestamp,
-                    'type' => $type
-                ];
-                $this->_data_recv = substr($this->_data_recv, 16);
+                // Timestamp: 4-byte little-endian integer (Bytes 10-13)
+                $timestamp_hex = substr($hex_record, 20, 8);
+                if (strlen($timestamp_hex) == 8) {
+                    $timestamp = unpack('V', hex2bin($timestamp_hex))[1];
+                } else {
+                    $timestamp = 0; // Invalid timestamp data
+                }
+
+                // Basic check for valid data before adding to results
+                if ($timestamp > 0 && !empty($userid)) {
+                    $attendance[] = [
+                        'userid'    => $userid,
+                        'timestamp' => $timestamp,
+                        'type'      => $type
+                    ];
+                }
+                
+                // Move the buffer forward to the next record
+                $data_payload = substr($data_payload, $record_size);
             }
             return $attendance;
         }
@@ -173,9 +191,8 @@ class TAD
                 $c = $c + ord(substr($buf, $j, 1)) * 256;
             }
         }
-        $chksum = pack('H*', sprintf('%04s', dechex($c)));
         $reply_id += 1;
-        $buf = pack('HHHH', $command, $chksum, $session_id, $reply_id) . $data;
+        $buf = pack('HHHH', $command, $c, $session_id, $reply_id) . $data;
         return $buf;
     }
 
