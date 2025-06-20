@@ -1,0 +1,4 @@
+# In file: app/.htaccess
+Deny from all
+# In file: app/.htaccess
+Deny from all

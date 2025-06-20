@@ -1,0 +1,175 @@
+/* Enhanced dashboard styling */
+.dashboard-stats {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+    backdrop-filter: blur(10px);
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+/* Calendar integration styles */
+.calendar-widget {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+}
+
+.calendar-day {
+    aspect-ratio: 1;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 4px;
+    position: relative;
+}
+
+.calendar-day:hover {
+    background-color: #f8f9fa;
+}
+
+.calendar-day.has-leave {
+    background-color: #d4edda;
+    color: #155724;
+    font-weight: bold;
+}
+
+.calendar-day.weekend {
+    background-color: #f8f9fa;
+}
+
+.day-number {
+    font-weight: 500;
+    font-size: 0.8em;
+    align-self: flex-start;
+}
+
+.calendar-day.weekend .day-number {
+    color: #6c757d;
+}
+
+.leave-entries {
+    width: 100%;
+    overflow-y: auto;
+    font-size: 0.65em;
+    line-height: 1.2;
+    text-align: left;
+    max-height: calc(100% - 20px);
+}
+
+.leave-entry {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background-color: rgba(255, 255, 255, 0.6);
+    border-radius: 3px;
+    padding: 1px 4px;
+    margin-top: 2px;
+    color: #155724;
+    font-weight: normal;
+}
+
+/* Quick actions panel */
+.quick-actions {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+}
+
+.quick-action-btn {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #495057;
+    transition: all 0.2s;
+    margin-bottom: 1rem;
+}
+
+.quick-action-btn:hover {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+}
+
+.quick-action-icon {
+    font-size: 1.5rem;
+    margin-right: 1rem;
+    color: #007bff;
+}
+
+/* Progress bars for leave balances */
+.balance-progress {
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.balance-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #28a745, #ffc107, #dc3545);
+    transition: width 0.3s ease;
+}
+
+/* Mobile responsiveness improvements */
+@media (max-width: 768px) {
+    .dashboard-stats {
+        padding: 1rem;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+    }
+    
+    .calendar-grid {
+        gap: 0.25rem;
+    }
+    
+    .quick-action-btn {
+        padding: 0.75rem;
+    }
+
+    .leave-entries {
+        display: none; /* Hide names on small screens to avoid clutter */
+    }
+}
