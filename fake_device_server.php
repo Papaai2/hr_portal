@@ -12,7 +12,11 @@ require_once __DIR__ . '/app/core/drivers/lib/BinaryHelper.php';
 $ip = '127.0.0.1';
 $port = 8099;
 
-function get_fake_fingertec_user_payload(): string { /* ... same as before ... */ }
+function get_fake_fingertec_user_payload(): string {
+    // Return a fake user payload as a binary string (example data)
+    // You should replace this with the actual payload structure as needed
+    return pack('A8A24A8A8A8', '12345678', 'John Doe', '00000001', 'admin', 'active');
+}
 
 $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 if (!$socket || !socket_set_option($socket, SOL_SOCKET, SO_REUSEADDR, 1) || !socket_bind($socket, $ip, $port) || !socket_listen($socket)) {

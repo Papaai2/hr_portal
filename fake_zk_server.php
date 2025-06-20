@@ -14,13 +14,7 @@ $port = 4370;
 
 function get_fake_zk_user_payload(): string
 {
-    // This function creates a fake binary payload of user data.
-    $payload = '';
-    // User 1: Pin 1, Name 'ZK-User-A', Role 'User'
-    $payload .= pack('v', 1) . str_pad('ZK-User-A', 28, "\0") . pack('C', 0) . str_pad('', 23, "\0");
-    // User 2: Pin 2, Name 'ZK-Admin-B', Role 'Admin'
-    $payload .= pack('v', 2) . str_pad('ZK-Admin-B', 28, "\0") . pack('C', 14) . str_pad('', 23, "\0");
-    return $payload;
+    return pack('A8A24A8A8A8', '12345678', 'John Doe', '00000001', 'admin', 'active');
 }
 
 // --- Constants ---
