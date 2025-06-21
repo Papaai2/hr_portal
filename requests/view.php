@@ -12,6 +12,7 @@ if (!$request_id) {
 
 $current_user_id = get_current_user_id();
 $current_user_role = get_current_user_role();
+$current_user_name = $_SESSION['full_name'];
 
 // Fetch request details
 $sql = "
@@ -68,10 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             case 'approve_manager':
                 if ($request['status'] === 'pending_manager' && ($current_user_role === 'manager' || $current_user_role === 'hr_manager' || $current_user_role === 'admin')) {
                     $new_status = 'pending_hr';
-                    $message_to_hr = "Leave request for " . $request['user_name'] . " (ID: {$request['user_id']}) has been approved by their manager.";
-                    create_notification($pdo, get_hr_user_id($pdo), $message_to_hr, $request_id);
+                    create_notification($pdo, get_hr_user_id($pdo), "Leave request for " . $request['user_name'] . " (ID: {$request['user_id']}) has been approved by their manager.", $request_id);
                     create_notification($pdo, $request['user_id'], "Your leave request (#{$request_id}) has been approved by your manager.", $request_id);
-                    log_audit_action($pdo, 'approve_request_manager', json_encode(['request_id' => $request_id, 'status' => $new_status]), $current_user_id);
+                    log_audit_action($pdo, 'approve_request_manager', "Manager approved request #{$request_id} for user '{$request['user_name']}'. Status changed to 'pending_hr'.");
                 }
                 break;
 
@@ -84,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     create_notification($pdo, $request['user_id'], "Your leave request (#{$request_id}) has been fully approved by HR.", $request_id);
                     create_notification($pdo, $request['manager_id'], "Leave request for " . $request['user_name'] . " (#{$request_id}) has been fully approved by HR.", $request_id);
-                    log_audit_action($pdo, 'approve_request_hr', json_encode(['request_id' => $request_id, 'status' => $new_status]), $current_user_id);
+                    log_audit_action($pdo, 'approve_request_hr', "HR approved request #{$request_id} for user '{$request['user_name']}'. Final status: 'approved'.");
                 }
                 break;
 
@@ -92,49 +92,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (in_array($request['status'], ['pending_manager', 'pending_hr']) && in_array($current_user_role, ['manager', 'hr', 'hr_manager', 'admin'])) {
                     $new_status = 'rejected';
                     create_notification($pdo, $request['user_id'], "Your leave request (#{$request_id}) has been rejected.", $request_id);
-                     // If manager rejects, notify HR too (if it was already pending HR, or if HR is higher than manager)
-                    if ($request['status'] === 'pending_hr' || in_array($current_user_role, ['hr', 'hr_manager', 'admin'])) {
+                     if ($request['status'] === 'pending_hr' || in_array($current_user_role, ['hr', 'hr_manager', 'admin'])) {
                         create_notification($pdo, get_hr_user_id($pdo), "Leave request for " . $request['user_name'] . " (#{$request_id}) has been rejected.", $request_id);
                     }
                     if ($request['status'] === 'pending_manager' && $request['manager_id'] !== $current_user_id) { // If HR/Admin rejects at manager stage
                         create_notification($pdo, $request['manager_id'], "Leave request for " . $request['user_name'] . " (#{$request_id}) was rejected by an admin/HR.", $request_id);
                     }
-                    log_audit_action($pdo, 'reject_request', json_encode(['request_id' => $request_id, 'status' => $new_status]), $current_user_id);
+                    log_audit_action($pdo, 'reject_request', "Rejected request #{$request_id} for user '{$request['user_name']}'.");
                 }
                 break;
 
             case 'cancel':
-                // Only the user or HR/Admin can cancel if not yet approved
                 if (($request['user_id'] === $current_user_id || in_array($current_user_role, ['hr', 'hr_manager', 'admin'])) && $request['status'] !== 'approved' && $request['status'] !== 'rejected') {
                     $new_status = 'cancelled';
-                    // Notify manager and HR if applicable
-                    if ($request['manager_id']) {
+                     if ($request['manager_id']) {
                          create_notification($pdo, $request['manager_id'], "Leave request for " . $request['user_name'] . " (#{$request_id}) has been cancelled.", $request_id);
                     }
-                    if (in_array($request['status'], ['pending_hr', 'approved'])) { // If it reached HR or was approved
+                    if (in_array($request['status'], ['pending_hr', 'approved'])) { 
                         create_notification($pdo, get_hr_user_id($pdo), "Leave request for " . $request['user_name'] . " (#{$request_id}) has been cancelled.", $request_id);
                     }
-                    log_audit_action($pdo, 'cancel_request', json_encode(['request_id' => $request_id, 'status' => $new_status]), $current_user_id);
+                    log_audit_action($pdo, 'cancel_request', "Request #{$request_id} for user '{$request['user_name']}' was cancelled.");
                 } else if ($request['user_id'] === $current_user_id && $request['status'] === 'approved') {
-                    // If user cancels an approved request, it needs HR attention to revert balance
                     $new_status = 'pending_cancellation_hr';
                     create_notification($pdo, get_hr_user_id($pdo), "Leave request for " . $request['user_name'] . " (#{$request_id}) (approved) has been requested for cancellation.", $request_id);
                     create_notification($pdo, $request['user_id'], "Your approved leave request (#{$request_id}) cancellation is pending HR review.", $request_id);
-                    log_audit_action($pdo, 'request_cancel_approved', json_encode(['request_id' => $request_id, 'status' => $new_status]), $current_user_id);
+                    log_audit_action($pdo, 'request_cancel_approved', "User '{$request['user_name']}' requested to cancel their approved request #{$request_id}.");
                 }
                 break;
             
-            // NEW ACTION: HR/Admin can revert approved cancellation
             case 'revert_approved_cancellation':
                 if ($request['status'] === 'pending_cancellation_hr' && in_array($current_user_role, ['hr', 'hr_manager', 'admin'])) {
-                    $new_status = 'cancelled'; // Set final status to cancelled
-                    // Revert leave balance if it was deducted
+                    $new_status = 'cancelled'; 
                     $stmt_balance = $pdo->prepare("UPDATE leave_balances SET balance_days = balance_days + ?, last_updated_at = NOW() WHERE user_id = ? AND leave_type_id = ?");
                     $stmt_balance->execute([$request['duration_days'], $request['user_id'], $request['leave_type_id']]);
                     
                     create_notification($pdo, $request['user_id'], "Your approved leave request (#{$request_id}) has been successfully cancelled by HR and balance reverted.", $request_id);
                     create_notification($pdo, $request['manager_id'], "Leave request for " . $request['user_name'] . " (#{$request_id}) has been cancelled by HR and balance reverted.", $request_id);
-                    log_audit_action($pdo, 'revert_approved_cancel', json_encode(['request_id' => $request_id, 'status' => $new_status]), $current_user_id);
+                    log_audit_action($pdo, 'revert_approved_cancel', "HR finalized cancellation for request #{$request_id} and reverted leave balance.");
                 }
                 break;
             
@@ -143,13 +137,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt_comment = $pdo->prepare("INSERT INTO request_comments (request_id, user_id, comment) VALUES (?, ?, ?)");
                     $stmt_comment->execute([$request_id, $current_user_id, $comment_text]);
                     
-                    // Notify involved parties
                     if ($current_user_id !== $request['user_id']) create_notification($pdo, $request['user_id'], "A comment was added to your request (#{$request_id}).", $request_id);
                     if ($current_user_id !== $request['manager_id'] && $request['manager_id']) create_notification($pdo, $request['manager_id'], "A comment was added to a team request (#{$request_id}) for " . $request['user_name'] . ".", $request_id);
-                    if (!in_array($current_user_role, ['hr', 'hr_manager', 'admin'])) { // If commenter is not HR/Admin, notify HR
+                    if (!in_array($current_user_role, ['hr', 'hr_manager', 'admin'])) {
                          create_notification($pdo, get_hr_user_id($pdo), "A comment was added to request (#{$request_id}) for " . $request['user_name'] . ".", $request_id);
                     }
-                    log_audit_action($pdo, 'add_request_comment', json_encode(['request_id' => $request_id, 'comment' => $comment_text]), $current_user_id);
+                    log_audit_action($pdo, 'add_request_comment', "User '{$current_user_name}' added a comment to request #{$request_id}.");
                 }
                 break;
         }

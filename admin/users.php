@@ -1,198 +1,247 @@
 <?php
-// in file: htdocs/admin/users.php
-// REVERTED to remove Sync to Devices button
-
 require_once __DIR__ . '/../app/bootstrap.php';
-require_role(['admin', 'hr', 'hr_manager']);
+require_role('admin');
 
 $page_title = 'Manage Users';
-include __DIR__ . '/../app/templates/header.php';
+$feedback = [];
+$editing_user = null;
 
-$error = '';
-$success = '';
+try {
+    // Handle POST requests for creating, updating, or deleting users
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $action = $_POST['action'] ?? '';
+        $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
+        
+        $pdo->beginTransaction();
 
-// Handle form submissions for Create and Update
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $user_id = $_POST['id'] ?? null;
-    $full_name = trim($_POST['full_name']);
-    $email = trim($_POST['email']);
-    $employee_code = trim($_POST['employee_code']);
-    $role = $_POST['role'];
-    $department_id = !empty($_POST['department_id']) ? $_POST['department_id'] : null;
-    $direct_manager_id = !empty($_POST['direct_manager_id']) ? $_POST['direct_manager_id'] : null;
-    $shift_id = !empty($_POST['shift_id']) ? $_POST['shift_id'] : null;
-    $password = $_POST['password'];
+        // --- UPDATE ---
+        if ($action === 'update' && $id) {
+            $stmt_before = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+            $stmt_before->execute([$id]);
+            $before_data = $stmt_before->fetch(PDO::FETCH_ASSOC);
 
-    // Basic Validation
-    if (empty($full_name) || empty($email) || empty($role)) {
-        $error = 'Full Name, Email, and Role are required.';
-    } else {
-        try {
-            if ($user_id) {
-                // UPDATE USER
-                $sql = "UPDATE users SET full_name = ?, email = ?, employee_code = ?, role = ?, department_id = ?, direct_manager_id = ?, shift_id = ? WHERE id = ?";
-                $params = [$full_name, $email, $employee_code, $role, $department_id, $direct_manager_id, $shift_id, $user_id];
-                $pdo->prepare($sql)->execute($params);
+            $full_name = sanitize_input($_POST['full_name']);
+            $email = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
+            $department_id = filter_input(INPUT_POST, 'department_id', FILTER_VALIDATE_INT);
+            $shift_id = filter_input(INPUT_POST, 'shift_id', FILTER_VALIDATE_INT);
+            // New manager_id field
+            $manager_id = filter_input(INPUT_POST, 'manager_id', FILTER_VALIDATE_INT);
+            if (empty($manager_id)) $manager_id = null; // Allow un-assigning a manager
 
-                if (!empty($password)) {
-                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                    $pdo->prepare("UPDATE users SET password = ?, must_change_password = 1 WHERE id = ?")->execute([$hashed_password, $user_id]);
-                }
-                $success = 'User updated successfully.';
-                log_audit_action($pdo, 'update_user', json_encode(['user_id' => $user_id, 'email' => $email]), get_current_user_id());
-            } else {
-                // CREATE USER
-                if (empty($password)) {
-                    throw new Exception("Password is required for new users.");
-                }
-                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                $sql = "INSERT INTO users (full_name, email, employee_code, password, role, department_id, direct_manager_id, shift_id, must_change_password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)";
-                $params = [$full_name, $email, $employee_code, $hashed_password, $role, $department_id, $direct_manager_id, $shift_id];
-                $pdo->prepare($sql)->execute($params);
-                $success = 'User created successfully.';
-                log_audit_action($pdo, 'add_user', json_encode(['email' => $email]), get_current_user_id());
+            $role = in_array($_POST['role'], ['user', 'hr_manager', 'admin', 'manager']) ? $_POST['role'] : 'user';
+            $is_active = isset($_POST['is_active']) ? 1 : 0;
+            $password = $_POST['password'];
+
+            if (!$full_name || !$email) throw new Exception("Full name and email are required.");
+
+            $update_sql = "UPDATE users SET full_name=?, email=?, department_id=?, shift_id=?, role=?, is_active=?, manager_id=? WHERE id=?";
+            $params = [$full_name, $email, $department_id, $shift_id, $role, $is_active, $manager_id, $id];
+            
+            if (!empty($password)) {
+                 $update_sql = "UPDATE users SET full_name=?, email=?, department_id=?, shift_id=?, role=?, is_active=?, manager_id=?, password=? WHERE id=?";
+                 $params = [$full_name, $email, $department_id, $shift_id, $role, $is_active, $manager_id, password_hash($password, PASSWORD_DEFAULT), $id];
             }
-            echo "<script>window.location.href = 'users.php?success=" . urlencode($success) . "';</script>";
-            exit();
-        } catch (Exception $e) {
-            if ($e instanceof PDOException && $e->getCode() == 23000) {
-                $error = 'An account with this email or employee code already exists.';
-            } else {
-                $error = 'An error occurred: ' . $e->getMessage();
-            }
-            error_log("User management error: " . $e->getMessage());
+            
+            $stmt = $pdo->prepare($update_sql);
+            $stmt->execute($params);
+
+            // Audit Trail Logic
+            $details_string = "Updated user {$full_name} (ID: $id).";
+            log_audit_action($pdo, 'user_updated', $details_string);
+            $_SESSION['feedback'] = ['success' => "User updated successfully."];
+
+        // --- CREATE ---
+        } elseif ($action === 'create') {
+            $full_name = sanitize_input($_POST['full_name']);
+            $email = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
+            $department_id = filter_input(INPUT_POST, 'department_id', FILTER_VALIDATE_INT);
+            $shift_id = filter_input(INPUT_POST, 'shift_id', FILTER_VALIDATE_INT);
+            // New manager_id field
+            $manager_id = filter_input(INPUT_POST, 'manager_id', FILTER_VALIDATE_INT);
+            if (empty($manager_id)) $manager_id = null;
+
+            $role = in_array($_POST['role'], ['user', 'hr_manager', 'admin', 'manager']) ? $_POST['role'] : 'user';
+            $is_active = isset($_POST['is_active']) ? 1 : 0;
+            $password = $_POST['password'];
+
+            if (!$full_name || !$email || empty($password)) throw new Exception("Full name, email, and password are required for new users.");
+            
+            $stmt = $pdo->prepare("INSERT INTO users (full_name, email, password, department_id, shift_id, role, is_active, manager_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$full_name, $email, password_hash($password, PASSWORD_DEFAULT), $department_id, $shift_id, $role, $is_active, $manager_id]);
+            $new_user_id = $pdo->lastInsertId();
+
+            log_audit_action($pdo, 'user_created', "Created user {$full_name} (ID: {$new_user_id}) with role '{$role}'.");
+            $_SESSION['feedback'] = ['success' => "User created successfully."];
         }
+        
+        $pdo->commit();
+        header("Location: users.php");
+        exit;
     }
+
+    // --- DELETE ---
+    if (isset($_GET['action']) && $_GET['action'] === 'delete') {
+        $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+        if (!$id) throw new Exception("Invalid user ID for deletion.");
+        
+        $stmt = $pdo->prepare("SELECT full_name FROM users WHERE id = ?");
+        $stmt->execute([$id]);
+        $user_name = $stmt->fetchColumn();
+
+        if ($user_name) {
+            $stmt_del = $pdo->prepare("DELETE FROM users WHERE id = ?");
+            $stmt_del->execute([$id]);
+            log_audit_action($pdo, 'user_deleted', "Deleted user {$user_name} (ID: {$id}).");
+            $_SESSION['feedback'] = ['success' => "User deleted successfully."];
+        } else {
+            $_SESSION['feedback'] = ['error' => "User with ID {$id} not found."];
+        }
+        
+        header("Location: users.php");
+        exit;
+    }
+
+} catch (Exception $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    $feedback['error'] = "An error occurred: " . $e->getMessage();
 }
 
-// Data Fetching for page display
-$editing_user = null;
-if (isset($_GET['action']) && ($_GET['action'] === 'edit' && isset($_GET['id']))) {
+if (isset($_SESSION['feedback'])) {
+    $feedback = $_SESSION['feedback'];
+    unset($_SESSION['feedback']);
+}
+
+// Fetch data for the form and user list
+$departments = $pdo->query("SELECT id, name FROM departments ORDER BY name")->fetchAll();
+$shifts = $pdo->query("SELECT id, shift_name FROM shifts ORDER BY shift_name")->fetchAll();
+// Fetch a list of potential managers
+$managers = $pdo->query("SELECT id, full_name FROM users WHERE role IN ('manager', 'hr_manager', 'admin') ORDER BY full_name")->fetchAll();
+// Fetch all users and join their manager's name
+$users = $pdo->query("
+    SELECT u.*, d.name as department_name, s.shift_name as shift_name, m.full_name as manager_name 
+    FROM users u 
+    LEFT JOIN departments d ON u.department_id = d.id 
+    LEFT JOIN shifts s ON u.shift_id = s.id 
+    LEFT JOIN users m ON u.manager_id = m.id
+    ORDER BY u.full_name
+")->fetchAll();
+
+if (isset($_GET['action']) && $_GET['action'] === 'edit') {
+    $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
     $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
-    $stmt->execute([$_GET['id']]);
+    $stmt->execute([$id]);
     $editing_user = $stmt->fetch();
 }
-$departments = $pdo->query("SELECT id, name FROM departments ORDER BY name")->fetchAll();
-$managers = $pdo->query("SELECT id, full_name FROM users WHERE role IN ('manager', 'admin', 'hr_manager') ORDER BY full_name")->fetchAll();
-$roles = ['user', 'manager', 'hr', 'hr_manager', 'admin'];
-$shifts = $pdo->query("SELECT id, shift_name, start_time, end_time FROM shifts ORDER BY shift_name")->fetchAll();
-$users_list = $pdo->query("SELECT u.*, d.name AS department_name, m.full_name AS manager_name, s.shift_name FROM users u LEFT JOIN departments d ON u.department_id = d.id LEFT JOIN users m ON u.direct_manager_id = m.id LEFT JOIN shifts s ON u.shift_id = s.id ORDER BY u.full_name")->fetchAll();
 
-if(isset($_GET['success'])) $success = $_GET['success'];
+include __DIR__ . '/../app/templates/header.php';
 ?>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h2">Manage Users</h1>
-    <div>
-        <a href="import_users_csv.php" class="btn btn-success"><i class="bi bi-upload me-1"></i> Import via CSV</a>
-        <a href="?action=add#user-form" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Add New User</a>
-    </div>
-</div>
+<?php if (!empty($feedback['success'])): ?><div class="alert alert-success"><?php echo htmlspecialchars($feedback['success']); ?></div><?php endif; ?>
+<?php if (!empty($feedback['error'])): ?><div class="alert alert-danger"><?php echo htmlspecialchars($feedback['error']); ?></div><?php endif; ?>
 
-<?php if ($success): ?><div class="alert alert-success"><?= htmlspecialchars($success) ?></div><?php endif; ?>
-<?php if ($error): ?><div class="alert alert-danger"><?= htmlspecialchars($error) ?></div><?php endif; ?>
-
-<?php if (isset($_GET['action']) && ($_GET['action'] === 'add' || $editing_user)): ?>
-<div class="card shadow-sm mb-4" id="user-form">
-    <div class="card-header"><h2 class="h5 mb-0"><?= $editing_user ? 'Edit User' : 'Add New User'; ?></h2></div>
-    <div class="card-body">
-        <form action="users.php" method="post">
-            <input type="hidden" name="id" value="<?= htmlspecialchars($editing_user['id'] ?? '') ?>">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label for="full_name" class="form-label">Full Name</label>
-                    <input type="text" class="form-control" name="full_name" required value="<?= htmlspecialchars($editing_user['full_name'] ?? '') ?>">
-                </div>
-                <div class="col-md-6">
-                    <label for="email" class="form-label">Email Address</label>
-                    <input type="email" class="form-control" name="email" required value="<?= htmlspecialchars($editing_user['email'] ?? '') ?>">
-                </div>
-                <div class="col-md-6">
-                    <label for="employee_code" class="form-label">Employee Code (from device)</label>
-                    <input type="text" class="form-control" name="employee_code" value="<?= htmlspecialchars($editing_user['employee_code'] ?? '') ?>">
-                </div>
-                <div class="col-md-6">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" name="password" <?= !$editing_user ? 'required' : '' ?>>
-                    <?php if ($editing_user): ?><div class="form-text">Leave blank to keep current password.</div><?php endif; ?>
-                </div>
-                <div class="col-md-6">
-                    <label for="role" class="form-label">Role</label>
-                    <select class="form-select" name="role" required>
-                        <?php foreach ($roles as $r): ?>
-                            <option value="<?= htmlspecialchars($r) ?>" <?= (isset($editing_user['role']) && $editing_user['role'] === $r) ? 'selected' : '' ?>><?= ucfirst(htmlspecialchars($r)) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label for="department_id" class="form-label">Department</label>
-                    <select class="form-select" name="department_id">
-                        <option value="">-- None --</option>
-                        <?php foreach ($departments as $dept): ?>
-                            <option value="<?= htmlspecialchars($dept['id']) ?>" <?= (isset($editing_user['department_id']) && $editing_user['department_id'] == $dept['id']) ? 'selected' : '' ?>><?= htmlspecialchars($dept['name']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                 <div class="col-md-6">
-                    <label for="direct_manager_id" class="form-label">Direct Manager</label>
-                    <select class="form-select" name="direct_manager_id">
-                        <option value="">-- None --</option>
-                        <?php foreach ($managers as $manager): ?>
-                            <?php if(isset($editing_user['id']) && $editing_user['id'] == $manager['id']) continue; ?>
-                            <option value="<?= htmlspecialchars($manager['id']) ?>" <?= (isset($editing_user['direct_manager_id']) && $editing_user['direct_manager_id'] == $manager['id']) ? 'selected' : '' ?>><?= htmlspecialchars($manager['full_name']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label for="shift_id" class="form-label">Assigned Shift</label>
-                    <select class="form-select" name="shift_id">
-                        <option value="">-- None --</option>
-                        <?php foreach ($shifts as $shift): ?>
-                            <option value="<?= htmlspecialchars($shift['id']) ?>" <?= (isset($editing_user['shift_id']) && $editing_user['shift_id'] == $shift['id']) ? 'selected' : '' ?>><?= htmlspecialchars($shift['shift_name'] . " (" . date("g:i A", strtotime($shift['start_time'])) . " - " . date("g:i A", strtotime($shift['end_time'])) . ")") ?></option>
-                        <?php endforeach; ?>
-                    </select>
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center"><h5 class="card-title mb-0">Users</h5><a href="?action=create#user-form" class="btn btn-primary">Add New User</a></div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Direct Manager</th><th>Role</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+                        <tbody>
+                            <?php foreach ($users as $user): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($user['full_name']); ?></td>
+                                    <td><?php echo htmlspecialchars($user['email']); ?></td>
+                                    <td><?php echo htmlspecialchars($user['department_name'] ?? 'N/A'); ?></td>
+                                    <td><?php echo htmlspecialchars($user['manager_name'] ?? 'N/A'); ?></td>
+                                    <td><span class="badge bg-secondary"><?php echo htmlspecialchars($user['role']); ?></span></td>
+                                    <td><span class="badge bg-<?php echo $user['is_active'] ? 'success' : 'danger'; ?>"><?php echo $user['is_active'] ? 'Active' : 'Inactive'; ?></span></td>
+                                    <td class="text-end">
+                                        <a href="?action=edit&id=<?php echo $user['id']; ?>#user-form" class="btn btn-sm btn-outline-primary">Edit</a>
+                                        <a href="?action=delete&id=<?php echo $user['id']; ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure?');">Delete</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            <div class="mt-4">
-                <button type="submit" class="btn btn-primary"><?= $editing_user ? 'Update User' : 'Create User'; ?></button>
-                <a href="users.php" class="btn btn-secondary">Cancel</a>
-            </div>
-        </form>
-    </div>
-</div>
-<?php endif; ?>
-
-<div class="card shadow-sm">
-    <div class="card-header"><h2 class="h5 mb-0">Existing Users</h2></div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead class="table-light">
-                    <tr><th>Full Name</th><th>Employee Code</th><th>Email</th><th>Role</th><th>Department</th><th>Manager</th><th>Shift</th><th class="text-end">Actions</th></tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($users_list)): ?>
-                        <tr><td colspan="8" class="text-center p-4">No users found.</td></tr>
-                    <?php else: ?>
-                        <?php foreach ($users_list as $user): ?>
-                            <tr>
-                                <td><?= htmlspecialchars($user['full_name']) ?></td>
-                                <td><code class="text-muted"><?= htmlspecialchars($user['employee_code'] ?? 'N/A') ?></code></td>
-                                <td><?= htmlspecialchars($user['email']) ?></td>
-                                <td><?= ucfirst(htmlspecialchars($user['role'])) ?></td>
-                                <td><?= htmlspecialchars($user['department_name'] ?? 'N/A') ?></td>
-                                <td><?= htmlspecialchars($user['manager_name'] ?? 'N/A') ?></td>
-                                <td><?= htmlspecialchars($user['shift_name'] ?? 'N/A') ?></td>
-                                <td class="text-end"><a href="?action=edit&id=<?= htmlspecialchars($user['id']) ?>#user-form" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-fill"></i> Edit</a></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
         </div>
     </div>
 </div>
 
-<?php
-include __DIR__ . '/../app/templates/footer.php';
-?>
+<?php if (isset($_GET['action']) && ($_GET['action'] === 'edit' || $_GET['action'] === 'create')): ?>
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card" id="user-form">
+            <div class="card-header"><h5 class="card-title mb-0"><?php echo $editing_user ? 'Edit User' : 'Add New User'; ?></h5></div>
+            <div class="card-body">
+                <form action="users.php" method="POST">
+                    <input type="hidden" name="action" value="<?php echo $editing_user ? 'update' : 'create'; ?>">
+                    <?php if ($editing_user): ?><input type="hidden" name="id" value="<?php echo $editing_user['id']; ?>"><?php endif; ?>
+                    <div class="row">
+                        <div class="col-md-6 mb-3"><label for="full_name" class="form-label">Full Name</label><input type="text" class="form-control" name="full_name" value="<?php echo htmlspecialchars($editing_user['full_name'] ?? ''); ?>" required></div>
+                        <div class="col-md-6 mb-3"><label for="email" class="form-label">Email</label><input type="email" class="form-control" name="email" value="<?php echo htmlspecialchars($editing_user['email'] ?? ''); ?>" required></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="department_id" class="form-label">Department</label>
+                            <select name="department_id" class="form-select">
+                                <option value="">Select Department</option>
+                                <?php foreach ($departments as $dept): ?><option value="<?php echo $dept['id']; ?>" <?php echo (isset($editing_user['department_id']) && $editing_user['department_id'] == $dept['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($dept['name']); ?></option><?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="shift_id" class="form-label">Shift</label>
+                            <select name="shift_id" class="form-select">
+                                <option value="">Select Shift</option>
+                                <?php foreach ($shifts as $shift): ?><option value="<?php echo $shift['id']; ?>" <?php echo (isset($editing_user['shift_id']) && $editing_user['shift_id'] == $shift['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($shift['shift_name']); ?></option><?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" name="password" <?php if (!$editing_user) echo 'required'; ?>>
+                            <?php if($editing_user): ?><small class="form-text text-muted">Leave blank to keep current password.</small><?php endif; ?>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="role" class="form-label">Role</label>
+                            <select name="role" class="form-select">
+                                <option value="user" <?php echo (isset($editing_user['role']) && $editing_user['role'] == 'user') ? 'selected' : ''; ?>>User</option>
+                                <option value="manager" <?php echo (isset($editing_user['role']) && $editing_user['role'] == 'manager') ? 'selected' : ''; ?>>Manager</option>
+                                <option value="hr_manager" <?php echo (isset($editing_user['role']) && $editing_user['role'] == 'hr_manager') ? 'selected' : ''; ?>>HR Manager</option>
+                                <option value="admin" <?php echo (isset($editing_user['role']) && $editing_user['role'] == 'admin') ? 'selected' : ''; ?>>Admin</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="manager_id" class="form-label">Direct Manager</label>
+                            <select name="manager_id" class="form-select">
+                                <option value="">No Manager</option>
+                                <?php foreach ($managers as $manager): ?>
+                                    <?php if (isset($editing_user['id']) && $editing_user['id'] === $manager['id']) continue; // A user cannot be their own manager ?>
+                                    <option value="<?php echo $manager['id']; ?>" <?php echo (isset($editing_user['manager_id']) && $editing_user['manager_id'] == $manager['id']) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($manager['full_name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3 align-self-center">
+                           <div class="form-check mt-3">
+                                <input class="form-check-input" type="checkbox" name="is_active" id="is_active" <?php echo (isset($editing_user['is_active']) && $editing_user['is_active']) || !$editing_user ? 'checked' : ''; ?>>
+                                <label class="form-check-label" for="is_active">User is Active</label>
+                           </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><?php echo $editing_user ? 'Update User' : 'Create User'; ?></button>
+                    <a href="users.php" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php include __DIR__ . '/../app/templates/footer.php'; ?>

@@ -1,5 +1,5 @@
 <?php
-// in file: htdocs/app/core/helpers.php
+// in file: app/core/helpers.php
 
 /**
  * Sanitizes user input to prevent XSS.
@@ -51,6 +51,7 @@ function getStatusBadgeClass($status) {
         'approved' => 'bg-success',
         'rejected' => 'bg-danger',
         'cancelled' => 'bg-secondary',
+        'pending_cancellation_hr' => 'bg-warning text-dark',
     ];
     return $map[$status] ?? 'bg-light text-dark';
 }
@@ -71,14 +72,14 @@ function getStatusText($status) {
  * @param PDO $pdo The PDO database connection object.
  * @param string $action The action performed (e.g., 'login', 'update_user').
  * @param string|null $details Optional details about the action (JSON or text).
- * @param int|null $user_id The user ID who performed the action (null for system actions).
  */
-function log_audit_action(PDO $pdo, string $action, ?string $details = null, ?int $user_id = null) {
-    $ip_address = $_SERVER['REMOTE_ADDR'] ?? null;
-    $sql = "INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)";
+function log_audit_action(PDO $pdo, string $action, ?string $details = null) {
+    $user_id = $_SESSION['user_id'] ?? null;
+    // User Agent and IP Address logging removed
+    $sql = "INSERT INTO audit_logs (user_id, action, details) VALUES (?, ?, ?)";
     try {
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$user_id, $action, $details, $ip_address]);
+        $stmt->execute([$user_id, $action, $details]);
     } catch (PDOException $e) {
         error_log("Failed to log audit action: " . $e->getMessage());
     }

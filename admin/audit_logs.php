@@ -12,7 +12,7 @@ $offset = ($page - 1) * $results_per_page;
 
 // Filtering settings
 $filter_user = sanitize_input($_GET['user_id'] ?? '');
-$filter_action = sanitize_input($_GET['action_type'] ?? '');
+$filter_action = sanitize_input($_GET['action'] ?? '');
 $filter_start_date = sanitize_input($_GET['start_date'] ?? '');
 $filter_end_date = sanitize_input($_GET['end_date'] ?? '');
 
@@ -25,16 +25,14 @@ if (!empty($filter_user)) {
     $params[] = $filter_user;
 }
 if (!empty($filter_action)) {
-    $where_clauses[] = 'al.action_type = ?';
+    $where_clauses[] = 'al.action = ?';
     $params[] = $filter_action;
 }
 if (!empty($filter_start_date)) {
-    // Use the correct column name 'created_at'
     $where_clauses[] = 'al.created_at >= ?';
     $params[] = $filter_start_date . ' 00:00:00';
 }
 if (!empty($filter_end_date)) {
-    // Use the correct column name 'created_at'
     $where_clauses[] = 'al.created_at <= ?';
     $params[] = $filter_end_date . ' 23:59:59';
 }
@@ -54,7 +52,7 @@ $stmt = $pdo->prepare(
      FROM audit_logs al 
      LEFT JOIN users u ON al.user_id = u.id
      {$where_sql}
-     ORDER BY al.created_at DESC -- Corrected column name here
+     ORDER BY al.created_at DESC
      LIMIT ? OFFSET ?"
 );
 $stmt->execute($stmt_params);
@@ -62,7 +60,7 @@ $logs = $stmt->fetchAll();
 
 // Fetch users and action types for filter dropdowns
 $users = $pdo->query("SELECT id, full_name, employee_code FROM users ORDER BY full_name")->fetchAll();
-$action_types = $pdo->query("SELECT DISTINCT action_type FROM audit_logs ORDER BY action_type")->fetchAll(PDO::FETCH_COLUMN);
+$action_types = $pdo->query("SELECT DISTINCT action FROM audit_logs ORDER BY action")->fetchAll(PDO::FETCH_COLUMN);
 
 include __DIR__ . '/../app/templates/header.php';
 ?>
@@ -85,8 +83,8 @@ include __DIR__ . '/../app/templates/header.php';
                 </select>
             </div>
             <div class="col-md-2">
-                <label for="action_type" class="form-label">Action Type</label>
-                <select name="action_type" id="action_type" class="form-select">
+                <label for="action" class="form-label">Action</label>
+                <select name="action" id="action" class="form-select">
                     <option value="">All Actions</option>
                     <?php foreach ($action_types as $type): ?>
                         <option value="<?php echo htmlspecialchars($type); ?>" <?php echo ($filter_action == $type) ? 'selected' : ''; ?>>
@@ -120,14 +118,12 @@ include __DIR__ . '/../app/templates/header.php';
                         <th>User</th>
                         <th>Action</th>
                         <th>Details</th>
-                        <th>IP Address</th>
-                        <th>User Agent</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($logs)): ?>
                         <tr>
-                            <td colspan="6" class="text-center">No audit logs found matching your criteria.</td>
+                            <td colspan="4" class="text-center">No audit logs found matching your criteria.</td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($logs as $log): ?>
@@ -144,13 +140,9 @@ include __DIR__ . '/../app/templates/header.php';
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="badge bg-info text-dark"><?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $log['action_type']))); ?></span>
+                                    <span class="badge bg-info text-dark"><?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $log['action']))); ?></span>
                                 </td>
                                 <td><?php echo htmlspecialchars($log['details'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($log['ip_address'] ?? ''); ?></td>
-                                <td data-bs-toggle="tooltip" title="<?php echo htmlspecialchars($log['user_agent'] ?? ''); ?>">
-                                    <?php echo htmlspecialchars(substr($log['user_agent'] ?? '', 0, 30)); ?>...
-                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -165,7 +157,7 @@ include __DIR__ . '/../app/templates/header.php';
     <ul class="pagination justify-content-center">
         <?php for ($i = 1; $i <= $total_pages; $i++): ?>
             <li class="page-item <?php if ($i == $page) echo 'active'; ?>">
-                <a class="page-link" href="?page=<?php echo $i; ?>&user_id=<?php echo htmlspecialchars($filter_user); ?>&action_type=<?php echo htmlspecialchars($filter_action); ?>&start_date=<?php echo htmlspecialchars($filter_start_date); ?>&end_date=<?php echo htmlspecialchars($filter_end_date); ?>"><?php echo $i; ?></a>
+                <a class="page-link" href="?page=<?php echo $i; ?>&user_id=<?php echo htmlspecialchars($filter_user); ?>&action=<?php echo htmlspecialchars($filter_action); ?>&start_date=<?php echo htmlspecialchars($filter_start_date); ?>&end_date=<?php echo htmlspecialchars($filter_end_date); ?>"><?php echo $i; ?></a>
             </li>
         <?php endfor; ?>
     </ul>
