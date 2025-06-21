@@ -40,11 +40,8 @@ abstract class EnhancedBaseDriver implements DeviceDriverInterface {
 
     abstract protected function getDefaultConfig();
 
-    /**
-     * Performs a quick, non-blocking check to see if the device port is open.
-     */
     public function ping(string $ip, int $port): bool {
-        $quickTimeout = 1; // 1-second timeout for a quick check
+        $quickTimeout = 1;
         $socket = @fsockopen($ip, $port, $errno, $errstr, $quickTimeout);
         if ($socket) {
             @fclose($socket);
@@ -130,6 +127,18 @@ abstract class EnhancedBaseDriver implements DeviceDriverInterface {
         } catch (Exception $e) { $this->logError("Connection verification failed: " . $e->getMessage()); return false; }
     }
 
+    // FIXED: Added the missing testConnection method back.
+    protected function testConnection() {
+        if (!$this->isConnected || !$this->socket) {
+            return false;
+        }
+        if ($this->isFakeDevice($this->host)) {
+            return true;
+        }
+        $meta = stream_get_meta_data($this->socket);
+        return !$meta['eof'];
+    }
+
     public function disconnect(): void {
         if ($this->socket) { @fclose($this->socket); $this->socket = null; $this->connection = null; }
         $this->isConnected = false; $this->sessionId = 0; $this->replyId = 0;
@@ -145,19 +154,17 @@ abstract class EnhancedBaseDriver implements DeviceDriverInterface {
         $this->retryDelay = $this->config['retry_delay'] ?? $this->retryDelay;
     }
 
-    // Standard getter and logging methods
     public function getDeviceName(): string { if (!$this->isConnected) return 'Not Connected'; if ($this->isFakeDevice($this->host)) return 'Fake Device'; return 'Connected Device'; }
     public function getUsers(): array { if ($this->isFakeDevice($this->host)) return $this->getFakeUsers(); return []; }
     public function getAttendanceLogs(): array { if ($this->isFakeDevice($this->host)) return $this->getFakeAttendanceLogs(); return []; }
     protected function getFakeUsers() { return [['user_id' => '1', 'name' => 'Mock User 1']]; }
     protected function getFakeAttendanceLogs() { return [['user_id' => '1', 'timestamp' => date('Y-m-d H:i:s')]]; }
-    protected function log($level, $message) { $logEntry = "[" . date('Y-m-d H:i:s') . "] [{$level}] {$message}" . PHP_EOL; file_put_contents($this->logPath . '/device_driver.log', $logEntry, FILE_APPEND); }
+    protected function log($level, $message) { $logEntry = "[" . date('Y-m-d H:i:s') . "] [{$level}] {$message}" . PHP_EOL; @file_put_contents($this->logPath . '/device_driver.log', $logEntry, FILE_APPEND); }
     protected function logInfo($message) { $this->log('INFO', $message); }
     protected function logError($message) { $this->log('ERROR', $message); $this->lastError = $message; }
     public function getLastError() { return $this->lastError; }
     public function isConnected() { return $this->isConnected; }
 
-    // Abstract methods to be implemented by child classes
     abstract public function addUser(string $userId, array $userData): bool;
     abstract public function deleteUser(string $userId): bool;
     abstract public function updateUser(string $userId, array $userData): bool;

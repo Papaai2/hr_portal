@@ -34,3 +34,12 @@
 [2025-06-21 15:46:53] [INFO] Attempting connection via tcp_socket
 [2025-06-21 15:46:53] [INFO] Connected successfully via tcp_socket on attempt 1
 [2025-06-21 15:46:53] [INFO] Sending ZKTeco command: 1000
+[2025-06-21 15:47:53] [ERROR] ZKTeco command send attempt 1 failed: Error reading response header
+[2025-06-21 15:49:37] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 15s and 1 attempts.
+[2025-06-21 15:49:37] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:49:37] [INFO] Connected successfully via tcp_socket on attempt 1
+[2025-06-21 15:49:37] [INFO] Sending ZKTeco command: 1000
+[2025-06-21 15:49:59] [INFO] Attempting to connect to 127.0.0.1:8099 with timeout 15s and 1 attempts.
+[2025-06-21 15:49:59] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:49:59] [INFO] Connected successfully via tcp_socket on attempt 1
+[2025-06-21 15:49:59] [INFO] Sending command: DATA QUERY userinfo
