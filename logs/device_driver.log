@@ -80,3 +80,14 @@
 [2025-06-21 15:55:04] [INFO] Attempting connection via fsockopen
 [2025-06-21 15:55:04] [INFO] Connected successfully via fsockopen on attempt 1
 [2025-06-21 15:55:04] [INFO] Sending ZKTeco command: 1000
+[2025-06-21 15:56:04] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 15s and 1 attempts.
+[2025-06-21 15:56:04] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:56:04] [INFO] Connected successfully via tcp_socket on attempt 1
+[2025-06-21 15:56:04] [INFO] Sending ZKTeco command: 1000
+[2025-06-21 15:56:09] [ERROR] ZKTeco command send attempt 1 failed: Error reading response header
+[2025-06-21 15:56:09] [ERROR] ZKTeco handshake failed: Error reading response header
+[2025-06-21 15:56:09] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:56:10] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:56:10] [INFO] Attempting connection via stream_socket
+[2025-06-21 15:56:11] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:56:11] [ERROR] All connection methods failed for 127.0.0.1:8100

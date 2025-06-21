@@ -7,41 +7,39 @@
 require_once __DIR__ . '/DeviceDriverInterface.php';
 
 abstract class EnhancedBaseDriver implements DeviceDriverInterface {
-    protected $host = '';
-    protected $port = 4370;
-    protected $timeout = 30;
+    protected string $host = '';
+    protected int $port = 4370;
+    protected int $timeout = 30;
     protected $socket = null;
-    protected $connection = null;
-    protected $lastError = '';
-    protected $isConnected = false;
-    protected $deviceInfo = [];
-    protected $errorLog = [];
-    protected $config = [];
-    protected $retryAttempts = 3;
-    protected $retryDelay = 2;
-    protected $sessionId = 0;
-    protected $replyId = 0;
-    protected $logPath = '';
-    protected $configPath = '';
-
-    public function __construct($config = []) {
+    protected $connection = null; // Can be a socket resource or stream
+    protected string $lastError = '';
+    protected bool $isConnected = false;
+    protected array $deviceInfo = [];
+    protected array $config = [];
+    protected int $retryAttempts = 3;
+    protected int $retryDelay = 2; // seconds
+    protected int $sessionId = 0;
+    protected int $replyId = 0;
+    protected string $logPath = '';
+    
+    public function __construct(array $config = []) {
         $this->config = array_merge($this->getDefaultConfig(), $config);
         $this->host = $this->config['host'] ?? '';
         $this->port = $this->config['port'] ?? 4370;
         $this->timeout = $this->config['timeout'] ?? 30;
-        $this->retryAttempts = $this->config['retry_attempts'] ?? 5;
+        $this->retryAttempts = $this->config['retry_attempts'] ?? 3;
         $this->retryDelay = $this->config['retry_delay'] ?? 2;
         $this->logPath = $this->config['log_path'] ?? dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'logs';
-        $this->configPath = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'device_configs';
         if (!is_dir($this->logPath)) {
             @mkdir($this->logPath, 0755, true);
         }
     }
 
-    abstract protected function getDefaultConfig();
+    abstract protected function getDefaultConfig(): array;
 
     public function ping(string $ip, int $port): bool {
-        $quickTimeout = 1;
+        // Ping uses a very short timeout to avoid delaying the UI.
+        $quickTimeout = 2;
         $socket = @fsockopen($ip, $port, $errno, $errstr, $quickTimeout);
         if ($socket) {
             @fclose($socket);
@@ -56,115 +54,146 @@ abstract class EnhancedBaseDriver implements DeviceDriverInterface {
         if ($key !== null) $this->config['key'] = $key;
         
         $this->logInfo("Attempting to connect to {$ip}:{$port} with timeout {$this->timeout}s and {$this->retryAttempts} attempts.");
-        if ($this->isFakeDevice($ip)) return $this->connectToFakeDevice($ip, $port);
+        if ($this->isFakeDevice($ip)) {
+            return $this->connectToFakeDevice($ip, $port);
+        }
 
+        // Try different connection methods for wider compatibility.
         $connectionMethods = [
-            'tcp_socket' => [$this, 'connectViaTCPSocket'],
+            'stream_socket' => [$this, 'connectViaStreamSocket'],
             'fsockopen' => [$this, 'connectViaFsockopen'],
-            'stream_socket' => [$this, 'connectViaStreamSocket']
         ];
 
-        foreach ($connectionMethods as $method => $callback) {
-            $this->logInfo("Attempting connection via {$method}");
+        foreach ($connectionMethods as $methodName => $callback) {
+            $this->logInfo("Attempting connection via {$methodName}");
             for ($attempt = 1; $attempt <= $this->retryAttempts; $attempt++) {
                 try {
                     if (call_user_func($callback)) {
                         $this->isConnected = true;
-                        $this->logInfo("Connected successfully via {$method} on attempt {$attempt}");
+                        $this->logInfo("Connected successfully via {$methodName} on attempt {$attempt}.");
+
+                        // After connecting, perform the device-specific handshake.
                         if (method_exists($this, 'performHandshake')) {
-                            if ($this->performHandshake()) return true;
+                            if ($this->performHandshake()) {
+                                return true; // Handshake successful
+                            }
+                            $this->logError("Handshake failed after successful connection via {$methodName}.");
                         } else {
-                            if ($this->verifyConnection()) return true;
+                            // If no handshake method, assume connection is sufficient.
+                            if ($this->verifyConnection()) {
+                                return true;
+                            }
                         }
                     }
                 } catch (Exception $e) {
-                    $this->logError("Connection attempt {$attempt} via {$method} failed: " . $e->getMessage());
-                    if ($attempt < $this->retryAttempts) sleep($this->retryDelay);
+                    $this->logError("Connection attempt {$attempt} via {$methodName} failed: " . $e->getMessage());
+                    if ($attempt < $this->retryAttempts) {
+                        sleep($this->retryDelay);
+                    }
                 }
             }
         }
-        $this->logError("All connection methods failed for {$ip}:{$port}");
+        $this->logError("All connection methods failed for {$ip}:{$port}.");
+        $this->lastError = "Unable to connect to device. All connection methods failed.";
         return false;
     }
+    
+    protected function setStreamTimeouts(): void {
+        if (is_resource($this->connection) || (is_object($this->connection) && get_resource_type($this->connection) === 'stream')) {
+            stream_set_timeout($this->connection, $this->timeout);
+            stream_set_blocking($this->connection, true);
+        }
+    }
 
-    protected function isFakeDevice($ip) { return in_array($ip, ['0.0.0.0']) || strpos($ip, 'fake') !== false || strpos($ip, 'test') !== false; }
+    protected function connectViaStreamSocket(): bool {
+        $this->connection = @stream_socket_client("tcp://{$this->host}:{$this->port}", $errno, $errstr, $this->timeout);
+        if (!$this->connection) {
+            throw new Exception("Stream Socket connection failed: {$errstr} ({$errno})");
+        }
+        $this->socket = $this->connection; // For backward compatibility if needed
+        $this->setStreamTimeouts(); // CRITICAL FIX: Set timeout for all subsequent reads/writes
+        return true;
+    }
 
-    protected function connectToFakeDevice($ip, $port) {
+    protected function connectViaFsockopen(): bool {
+        $this->connection = @fsockopen($this->host, $this->port, $errno, $errstr, $this->timeout);
+        if (!$this->connection) {
+            throw new Exception("Fsockopen connection failed: {$errstr} ({$errno})");
+        }
+        $this->socket = $this->connection;
+        $this->setStreamTimeouts(); // CRITICAL FIX: Set timeout for all subsequent reads/writes
+        return true;
+    }
+
+    protected function isFakeDevice($ip): bool {
+        return in_array(strtolower($ip), ['0.0.0.0', 'fake', 'test', 'localhost', '127.0.0.1']);
+    }
+
+    protected function connectToFakeDevice($ip, $port): bool {
         $this->logInfo("Connecting to MOCK device at {$ip}:{$port}");
         $this->socket = fopen('php://memory', 'r+');
         $this->connection = $this->socket;
         $this->isConnected = true;
-        $this->deviceInfo = ['manufacturer' => get_class($this), 'model' => 'Fake Device', 'firmware' => '1.0.0', 'serial' => 'FAKE' . date('Ymd'), 'supports_realtime' => true, 'communication_type' => 'fake'];
-        $this->logInfo("Successfully connected to MOCK device");
+        $this->deviceInfo = [
+            'manufacturer' => get_class($this),
+            'model' => 'Fake Device',
+            'firmware' => '1.0.0',
+            'serial' => 'FAKE' . date('Ymd')
+        ];
+        $this->logInfo("Successfully connected to MOCK device.");
         return true;
     }
 
-    protected function connectViaTCPSocket() {
-        $context = stream_context_create(['socket' => ['so_keepalive' => true]]);
-        $this->socket = @stream_socket_client("tcp://{$this->host}:{$this->port}", $errno, $errstr, $this->timeout, STREAM_CLIENT_CONNECT, $context);
-        if (!$this->socket) throw new Exception("TCP Socket connection failed: {$errstr} ({$errno})");
-        $this->connection = $this->socket; stream_set_blocking($this->socket, 1); return true;
-    }
-
-    protected function connectViaFsockopen() {
-        $this->socket = @fsockopen($this->host, $this->port, $errno, $errstr, $this->timeout);
-        if (!$this->socket) throw new Exception("Fsockopen connection failed: {$errstr} ({$errno})");
-        $this->connection = $this->socket; return true;
-    }
-
-    protected function connectViaStreamSocket() {
-        $context = stream_context_create();
-        $this->socket = @stream_socket_client("tcp://{$this->host}:{$this->port}", $errno, $errstr, $this->timeout, STREAM_CLIENT_CONNECT, $context);
-        if (!$this->socket) throw new Exception("Stream socket connection failed: {$errstr} ({$errno})");
-        $this->connection = $this->socket; return true;
-    }
-
-    protected function verifyConnection() {
-        if (!$this->socket || $this->isFakeDevice($this->host)) return true;
+    protected function verifyConnection(): bool {
+        if (!$this->connection || $this->isFakeDevice($this->host)) return true;
         try {
-            if (stream_get_meta_data($this->socket)['eof']) { $this->logError("Connection verification failed: socket EOF"); return false; }
+            if (stream_get_meta_data($this->connection)['eof']) {
+                $this->logError("Connection verification failed: socket EOF");
+                $this->lastError = "Connection closed by the device.";
+                return false;
+            }
             return true;
-        } catch (Exception $e) { $this->logError("Connection verification failed: " . $e->getMessage()); return false; }
-    }
-
-    // FIXED: Added the missing testConnection method back.
-    protected function testConnection() {
-        if (!$this->isConnected || !$this->socket) {
+        } catch (Exception $e) {
+            $this->logError("Connection verification failed: " . $e->getMessage());
+            $this->lastError = "Connection verification failed.";
             return false;
         }
-        if ($this->isFakeDevice($this->host)) {
-            return true;
-        }
-        $meta = stream_get_meta_data($this->socket);
-        return !$meta['eof'];
     }
 
     public function disconnect(): void {
-        if ($this->socket) { @fclose($this->socket); $this->socket = null; $this->connection = null; }
-        $this->isConnected = false; $this->sessionId = 0; $this->replyId = 0;
+        if ($this->connection && is_resource($this->connection)) {
+            @fclose($this->connection);
+        }
+        $this->socket = null;
+        $this->connection = null;
+        $this->isConnected = false;
+        $this->sessionId = 0;
+        $this->replyId = 0;
         $this->logInfo("Disconnected from device {$this->host}");
     }
     
-    public function setConfig($config) {
+    public function setConfig(array $config): void {
         $this->config = array_merge($this->config, $config);
-        $this->host = $this->config['host'] ?? $this->host;
-        $this->port = $this->config['port'] ?? $this->port;
-        $this->timeout = $this->config['timeout'] ?? $this->timeout;
-        $this->retryAttempts = $this->config['retry_attempts'] ?? $this->retryAttempts;
-        $this->retryDelay = $this->config['retry_delay'] ?? $this->retryDelay;
+        foreach ($config as $key => $value) {
+            if (property_exists($this, $key)) {
+                $this->{$key} = $value;
+            }
+        }
     }
 
-    public function getDeviceName(): string { if (!$this->isConnected) return 'Not Connected'; if ($this->isFakeDevice($this->host)) return 'Fake Device'; return 'Connected Device'; }
-    public function getUsers(): array { if ($this->isFakeDevice($this->host)) return $this->getFakeUsers(); return []; }
-    public function getAttendanceLogs(): array { if ($this->isFakeDevice($this->host)) return $this->getFakeAttendanceLogs(); return []; }
-    protected function getFakeUsers() { return [['user_id' => '1', 'name' => 'Mock User 1']]; }
-    protected function getFakeAttendanceLogs() { return [['user_id' => '1', 'timestamp' => date('Y-m-d H:i:s')]]; }
-    protected function log($level, $message) { $logEntry = "[" . date('Y-m-d H:i:s') . "] [{$level}] {$message}" . PHP_EOL; @file_put_contents($this->logPath . '/device_driver.log', $logEntry, FILE_APPEND); }
-    protected function logInfo($message) { $this->log('INFO', $message); }
-    protected function logError($message) { $this->log('ERROR', $message); $this->lastError = $message; }
-    public function getLastError() { return $this->lastError; }
-    public function isConnected() { return $this->isConnected; }
-
+    public function getLastError(): string { return $this->lastError; }
+    public function isConnected(): bool { return $this->isConnected; }
+    protected function logInfo(string $message): void { $this->log('INFO', $message); }
+    protected function logError(string $message): void { $this->log('ERROR', $message); $this->lastError = $message; }
+    private function log(string $level, string $message): void {
+        $logFile = $this->logPath . '/device_driver_' . date('Y-m-d') . '.log';
+        $logEntry = "[" . date('Y-m-d H:i:s') . "] [{$level}] [{$this->host}] {$message}" . PHP_EOL;
+        @file_put_contents($logFile, $logEntry, FILE_APPEND);
+    }
+    
+    // Abstract methods to be implemented by child classes
+    abstract public function getUsers(): array;
+    abstract public function getAttendanceLogs(): array;
     abstract public function addUser(string $userId, array $userData): bool;
     abstract public function deleteUser(string $userId): bool;
     abstract public function updateUser(string $userId, array $userData): bool;
