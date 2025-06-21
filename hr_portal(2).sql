@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 21, 2025 at 02:44 PM
+-- Generation Time: Jun 21, 2025 at 05:55 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -46,6 +46,21 @@ CREATE TABLE `attendance_logs` (
 --
 
 TRUNCATE TABLE `attendance_logs`;
+--
+-- Dumping data for table `attendance_logs`
+--
+
+INSERT INTO `attendance_logs` (`id`, `device_id`, `employee_code`, `punch_time`, `expected_in`, `expected_out`, `punch_state`, `status`, `violation_type`, `notes`, `created_at`) VALUES
+(6, 2, '1', '2025-06-21 10:01:15', '07:45:00', '16:00:00', 0, 'error', 'late_in', NULL, '2025-06-21 15:17:59'),
+(10, 2, '1', '2025-06-21 10:01:15', '07:45:00', '16:00:00', 0, 'error', 'late_in', NULL, '2025-06-21 15:25:45'),
+(11, 2, '2', '2016-02-22 00:28:16', '07:45:00', '16:00:00', 0, 'unprocessed', NULL, NULL, '2025-06-21 15:25:45'),
+(12, 4, '10', '2025-06-21 08:59:10', '07:45:00', '16:00:00', 0, 'error', 'late_in', NULL, '2025-06-21 15:25:45'),
+(13, 4, '11', '2025-06-21 18:01:05', '07:45:00', '16:00:00', 1, 'corrected', NULL, 'State swapped. Action by user #1 on 2025-06-21 18:26:42', '2025-06-21 15:25:45'),
+(14, 2, '1', '2025-06-21 10:01:15', '07:45:00', '16:00:00', 0, 'error', 'late_in', NULL, '2025-06-21 15:26:22'),
+(15, 2, '2', '2016-02-22 00:28:16', '07:45:00', '16:00:00', 1, 'error', 'early_out', NULL, '2025-06-21 15:26:22'),
+(16, 4, '10', '2025-06-21 08:59:10', '07:45:00', '16:00:00', 0, 'error', 'late_in', NULL, '2025-06-21 15:26:22'),
+(17, 4, '11', '2025-06-21 18:01:05', '07:45:00', '16:00:00', 0, 'error', 'late_in', NULL, '2025-06-21 15:26:22');
+
 -- --------------------------------------------------------
 
 --
@@ -97,7 +112,8 @@ INSERT INTO `audit_logs` (`id`, `user_id`, `action`, `details`, `created_at`) VA
 (25, 1, 'update_shift', 'Updated shift \'Fixed\' (ID: 1).', '2025-06-21 01:03:50'),
 (26, 1, 'update_shift', 'Updated shift \'Fixed\' (ID: 1).', '2025-06-21 01:05:14'),
 (27, 1, 'add_request_comment', 'User \'Joseph Ashraf\' added a comment to request #4.', '2025-06-21 01:14:28'),
-(28, 1, 'update_shift', 'Updated shift \'Fixed\' (ID: 1).', '2025-06-21 01:15:43');
+(28, 1, 'update_shift', 'Updated shift \'Fixed\' (ID: 1).', '2025-06-21 01:15:43'),
+(29, 1, 'swap_punch_state', '{\"log_id\":13}', '2025-06-21 15:26:42');
 
 -- --------------------------------------------------------
 
@@ -394,7 +410,10 @@ INSERT INTO `users` (`id`, `employee_code`, `full_name`, `email`, `password`, `r
 (4, '1002', 'Engineering Manager', 'eng.manager@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'manager', NULL, 2, NULL, 1, 0, '2025-06-20 20:29:02', '2025-06-20 23:59:11', NULL),
 (5, '1003', 'Senior Engineer', 'senior.engineer@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'user', NULL, 2, 4, 1, 0, '2025-06-20 20:29:02', '2025-06-20 23:59:13', NULL),
 (6, '1004', 'Junior Engineer', 'junior.engineer@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'user', NULL, 2, 4, 1, 0, '2025-06-20 20:29:02', '2025-06-20 23:59:15', NULL),
-(7, '1005', 'Marketing Specialist', 'marketing@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'user', NULL, 3, NULL, 1, 1, '2025-06-20 20:29:02', '2025-06-20 23:59:17', NULL);
+(7, '1005', 'Marketing Specialist', 'marketing@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'user', NULL, 3, NULL, 1, 1, '2025-06-20 20:29:02', '2025-06-20 23:59:17', NULL),
+(9, '2', '(Fake)', 'fake2@example.com', '$2y$10$nL/eblgYx13q40Z.hKbqze6lUweXPFUBotB2TFJkQtq..pna6DJ2.', '', 1, NULL, NULL, 1, 0, '2025-06-21 15:25:30', '2025-06-21 15:25:30', NULL),
+(10, '10', 'FT User One', 'ftuserone10@example.com', '$2y$10$jkzoyrizab86iwRX8UOA3O7BV3FXRKNuZ/J1idfL9snqoMDiC0umG', '', 1, NULL, NULL, 1, 0, '2025-06-21 15:25:30', '2025-06-21 15:25:30', NULL),
+(11, '11', 'FT Admin', 'ftadmin11@example.com', '$2y$10$N3MYwS3rCJlx6n0fssTff.AQJ4vimXBpOo59aSDSgVOif70WT6euO', '', 1, NULL, NULL, 1, 0, '2025-06-21 15:25:30', '2025-06-21 15:25:30', NULL);
 
 -- --------------------------------------------------------
 
@@ -545,13 +564,13 @@ ALTER TABLE `vacation_requests`
 -- AUTO_INCREMENT for table `attendance_logs`
 --
 ALTER TABLE `attendance_logs`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
 
 --
 -- AUTO_INCREMENT for table `departments`
@@ -605,7 +624,7 @@ ALTER TABLE `shifts`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `vacation_requests`
