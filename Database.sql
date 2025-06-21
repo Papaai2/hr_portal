@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 21, 2025 at 01:35 AM
+-- Generation Time: Jun 21, 2025 at 02:36 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -92,7 +92,9 @@ INSERT INTO `audit_logs` (`id`, `user_id`, `action`, `details`, `ip_address`, `c
 (19, 1, 'update_device', '{\"device_id\":\"4\",\"name\":\"TRy 2\",\"ip_address\":\"127.0.0.1\",\"port\":\"4371\",\"device_brand\":\"Fingertec\"}', '127.0.0.1', '2025-06-20 22:54:41'),
 (20, 1, 'update_device', '{\"device_id\":\"4\",\"name\":\"TRy 2\",\"ip_address\":\"127.0.0.1\",\"port\":\"4370\",\"device_brand\":\"Fingertec\"}', '127.0.0.1', '2025-06-20 22:54:46'),
 (21, 1, 'update_device', '{\"device_id\":\"4\",\"name\":\"TRy 2\",\"ip_address\":\"127.0.0.1\",\"port\":\"8099\",\"device_brand\":\"Fingertec\"}', '127.0.0.1', '2025-06-20 22:56:47'),
-(22, 1, 'update_device', '{\"action\":\"save_device\",\"device_id\":\"2\",\"name\":\"TRy 1\",\"ip_address\":\"127.0.0.1\",\"port\":\"4370\",\"device_brand\":\"ZKTeco\"}', '127.0.0.1', '2025-06-20 23:11:22');
+(22, 1, 'update_device', '{\"action\":\"save_device\",\"device_id\":\"2\",\"name\":\"TRy 1\",\"ip_address\":\"127.0.0.1\",\"port\":\"4370\",\"device_brand\":\"ZKTeco\"}', '127.0.0.1', '2025-06-20 23:11:22'),
+(23, 1, 'update_shift', '{\"shift_id\":1,\"name\":\"Fixed\"}', '127.0.0.1', '2025-06-21 00:14:59'),
+(24, 1, 'update_user', '{\"user_id\":\"1\",\"email\":\"eptj0e@gmail.com\"}', '127.0.0.1', '2025-06-21 00:15:21');
 
 -- --------------------------------------------------------
 
@@ -350,7 +352,7 @@ TRUNCATE TABLE `shifts`;
 --
 
 INSERT INTO `shifts` (`id`, `shift_name`, `start_time`, `end_time`, `grace_period_in`, `grace_period_out`, `break_start_time`, `break_end_time`, `is_night_shift`, `created_at`, `updated_at`) VALUES
-(1, 'Fixed', '07:45:00', '15:45:00', 0, 0, NULL, NULL, 0, '2025-06-20 21:39:11', '2025-06-20 21:39:11');
+(1, 'Fixed', '07:45:00', '15:45:00', 15, 0, NULL, NULL, 0, '2025-06-20 21:39:11', '2025-06-21 00:14:59');
 
 -- --------------------------------------------------------
 
@@ -384,13 +386,13 @@ TRUNCATE TABLE `users`;
 --
 
 INSERT INTO `users` (`id`, `employee_code`, `full_name`, `email`, `password`, `role`, `shift_id`, `department_id`, `direct_manager_id`, `is_active`, `must_change_password`, `created_at`, `updated_at`) VALUES
-(1, NULL, 'Joseph Ashraf', 'eptj0e@gmail.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'admin', NULL, NULL, NULL, 1, 0, '2025-06-20 20:30:35', '2025-06-20 20:30:44'),
-(2, 'HRM-001', 'HR Manager', 'hr.manager@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'hr_manager', NULL, 1, NULL, 1, 0, '2025-06-20 20:29:02', '2025-06-20 20:31:23'),
-(3, 'HR-001', 'HR Staff', 'hr.staff@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'hr', NULL, 1, 2, 1, 0, '2025-06-20 20:29:02', '2025-06-20 20:31:26'),
-(4, 'ENGM-001', 'Engineering Manager', 'eng.manager@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'manager', NULL, 2, NULL, 1, 0, '2025-06-20 20:29:02', '2025-06-20 20:31:28'),
-(5, 'ENG-001', 'Senior Engineer', 'senior.engineer@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'user', NULL, 2, 4, 1, 0, '2025-06-20 20:29:02', '2025-06-20 20:31:31'),
-(6, 'ENG-002', 'Junior Engineer', 'junior.engineer@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'user', NULL, 2, 4, 1, 0, '2025-06-20 20:29:02', '2025-06-20 20:31:33'),
-(7, 'MKT-001', 'Marketing Specialist', 'marketing@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'user', NULL, 3, NULL, 1, 1, '2025-06-20 20:29:02', '2025-06-20 20:31:35');
+(1, '1', 'Joseph Ashraf', 'eptj0e@gmail.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'admin', 1, NULL, NULL, 1, 0, '2025-06-20 20:30:35', '2025-06-21 00:15:21'),
+(2, '1000', 'HR Manager', 'hr.manager@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'hr_manager', NULL, 1, NULL, 1, 0, '2025-06-20 20:29:02', '2025-06-20 23:59:03'),
+(3, '1001', 'HR Staff', 'hr.staff@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'hr', NULL, 1, 2, 1, 0, '2025-06-20 20:29:02', '2025-06-20 23:59:07'),
+(4, '1002', 'Engineering Manager', 'eng.manager@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'manager', NULL, 2, NULL, 1, 0, '2025-06-20 20:29:02', '2025-06-20 23:59:11'),
+(5, '1003', 'Senior Engineer', 'senior.engineer@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'user', NULL, 2, 4, 1, 0, '2025-06-20 20:29:02', '2025-06-20 23:59:13'),
+(6, '1004', 'Junior Engineer', 'junior.engineer@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'user', NULL, 2, 4, 1, 0, '2025-06-20 20:29:02', '2025-06-20 23:59:15'),
+(7, '1005', 'Marketing Specialist', 'marketing@example.com', '$2y$10$MqAfaXTI4x2pU5cOmwPR9e6FZgFFpyk8CQkQiX5PDZj.K1uTuogHK', 'user', NULL, 3, NULL, 1, 1, '2025-06-20 20:29:02', '2025-06-20 23:59:17');
 
 -- --------------------------------------------------------
 
@@ -546,7 +548,7 @@ ALTER TABLE `attendance_logs`
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `departments`
