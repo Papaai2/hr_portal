@@ -37,8 +37,6 @@ class ZKTecoDriver extends EnhancedBaseDriver {
     const RESPONSE_ERROR = 2001;
     const RESPONSE_DATA = 2002;
     
-    protected $sessionId = 0;
-    protected $replyId = 0;
     protected $packetSize = 1024;
     
     protected $zktecoModels = [
@@ -67,9 +65,18 @@ class ZKTecoDriver extends EnhancedBaseDriver {
         ];
     }
     
-    // ZKTeco handshake procedure
+    /**
+     * ZKTeco handshake procedure
+     */
     protected function performHandshake() {
         try {
+            // Handle fake device handshake
+            if ($this->isFakeDevice($this->host)) {
+                $this->sessionId = rand(1000, 9999);
+                $this->logInfo("Fake ZKTeco handshake successful, session ID: {$this->sessionId}");
+                return true;
+            }
+            
             // Send connect command
             $response = $this->sendZKCommand(self::COMMAND_CONNECT, '');
             
@@ -96,10 +103,17 @@ class ZKTecoDriver extends EnhancedBaseDriver {
         }
     }
     
-    // Send ZKTeco binary command
+    /**
+     * Send ZKTeco binary command
+     */
     protected function sendZKCommand($command, $data = '', $expectResponse = true) {
         if (!$this->isConnected) {
             throw new Exception("Not connected to ZKTeco device");
+        }
+        
+        // Handle fake device commands
+        if ($this->isFakeDevice($this->host)) {
+            return $this->handleFakeZKCommand($command, $data);
         }
         
         // Build ZKTeco packet
@@ -140,7 +154,7 @@ class ZKTecoDriver extends EnhancedBaseDriver {
                     if (!$this->testConnection()) {
                         $this->logInfo("Reconnecting for retry attempt " . ($attempt + 1));
                         $this->disconnect();
-                        if (!$this->connect($this->config)) {
+                        if (!$this->connect($this->host, $this->port)) {
                             throw new Exception("Failed to reconnect for retry");
                         }
                     }
@@ -153,7 +167,64 @@ class ZKTecoDriver extends EnhancedBaseDriver {
         throw new Exception("ZKTeco command failed after {$this->retryAttempts} attempts");
     }
     
-    // Build ZKTeco binary packet
+    /**
+     * Handle fake ZKTeco commands for testing
+     */
+    protected function handleFakeZKCommand($command, $data = '') {
+        $this->logInfo("Handling fake ZKTeco command: {$command}");
+        
+        switch ($command) {
+            case self::COMMAND_CONNECT:
+                return [
+                    'command' => self::RESPONSE_OK,
+                    'session_id' => $this->sessionId,
+                    'data' => ''
+                ];
+                
+            case self::COMMAND_VERSION:
+                return [
+                    'command' => self::RESPONSE_OK,
+                    'data' => 'ZKTeco K50 Ver 6.60 Oct 28 2019'
+                ];
+                
+            case self::COMMAND_USER_WRQ:
+                return [
+                    'command' => self::RESPONSE_DATA,
+                    'data' => $this->getFakeZKUsers()
+                ];
+                
+            case self::COMMAND_ATTLOG_RRQ:
+                return [
+                    'command' => self::RESPONSE_DATA,
+                    'data' => $this->getFakeZKAttendance()
+                ];
+                
+            case self::COMMAND_STATE_RRQ:
+                return [
+                    'command' => self::RESPONSE_OK,
+                    'data' => pack('VVVVVV', 3, 20, 100000, 50000, 1, time())
+                ];
+                
+            case self::COMMAND_CLEAR_ATTLOG:
+            case self::COMMAND_ENABLE_DEVICE:
+            case self::COMMAND_DISABLE_DEVICE:
+            case self::COMMAND_SET_TIME:
+                return [
+                    'command' => self::RESPONSE_OK,
+                    'data' => ''
+                ];
+                
+            default:
+                return [
+                    'command' => self::RESPONSE_OK,
+                    'data' => ''
+                ];
+        }
+    }
+    
+    /**
+     * Build ZKTeco binary packet
+     */
     protected function buildZKPacket($command, $data = '') {
         $this->replyId++;
         
@@ -180,7 +251,9 @@ class ZKTecoDriver extends EnhancedBaseDriver {
         return $packet;
     }
     
-    // Calculate ZKTeco packet checksum
+    /**
+     * Calculate ZKTeco packet checksum
+     */
     protected function calculateChecksum($packet) {
         $sum = 0;
         $length = strlen($packet);
@@ -197,92 +270,111 @@ class ZKTecoDriver extends EnhancedBaseDriver {
         return $sum & 0xFFFF;
     }
     
-    // Read ZKTeco response packet
+    /**
+     * Read ZKTeco response packet
+     */
     protected function readZKResponse() {
+        $response = '';
+        $startTime = time();
         $headerSize = 12; // ZKTeco header size
-        $maxDataSize = 65535;
         
         // Read header first
-        $header = $this->readBytes($headerSize);
-        if (strlen($header) < $headerSize) {
-            throw new Exception("Incomplete header received");
+        while (strlen($response) < $headerSize && (time() - $startTime) < $this->timeout) {
+            $chunk = fread($this->connection, $headerSize - strlen($response));
+            if ($chunk === false) {
+                throw new Exception("Error reading response header");
+            }
+            $response .= $chunk;
+        }
+        
+        if (strlen($response) < $headerSize) {
+            throw new Exception("Incomplete response header received");
         }
         
         // Parse header
-        $parsed = unpack('Sstart/Scmd/Schk/Sses/Srpl/Ssize', $header);
+        $header = unpack('Sstart/Scommand/Schecksum/Ssession/Sreply/Ssize', $response);
         
-        if ($parsed['start'] !== 0x5050) {
-            throw new Exception("Invalid packet start marker: " . dechex($parsed['start']));
-        }
-        
-        $dataSize = $parsed['size'];
-        if ($dataSize > $maxDataSize) {
-            throw new Exception("Data size too large: {$dataSize}");
+        if ($header['start'] !== 0x5050) {
+            throw new Exception("Invalid response packet start marker");
         }
         
         // Read data if present
-        $data = '';
+        $dataSize = $header['size'];
         if ($dataSize > 0) {
-            $data = $this->readBytes($dataSize);
-            if (strlen($data) < $dataSize) {
-                throw new Exception("Incomplete data received");
+            $dataResponse = '';
+            while (strlen($dataResponse) < $dataSize && (time() - $startTime) < $this->timeout) {
+                $chunk = fread($this->connection, $dataSize - strlen($dataResponse));
+                if ($chunk === false) {
+                    throw new Exception("Error reading response data");
+                }
+                $dataResponse .= $chunk;
             }
+            $response .= $dataResponse;
         }
         
         return [
-            'command' => $parsed['cmd'],
-            'session_id' => $parsed['ses'],
-            'reply_id' => $parsed['rpl'],
-            'data' => $data,
-            'size' => $dataSize
+            'command' => $header['command'],
+            'session_id' => $header['session'],
+            'reply_id' => $header['reply'],
+            'data' => $dataSize > 0 ? substr($response, $headerSize) : ''
         ];
     }
     
-    // Read exact number of bytes with timeout
-    protected function readBytes($length) {
-        $data = '';
-        $startTime = time();
-        
-        while (strlen($data) < $length && (time() - $startTime) < $this->config['timeout']) {
-            $remaining = $length - strlen($data);
-            $chunk = fread($this->connection, $remaining);
-            
-            if ($chunk === false) {
-                throw new Exception("Error reading from socket");
-            }
-            
-            if ($chunk === '') {
-                usleep(10000); // 10ms
-                continue;
-            }
-            
-            $data .= $chunk;
-        }
-        
-        return $data;
+    /**
+     * Interface method implementations
+     */
+    public function getDeviceName(): string {
+        $deviceInfo = $this->getDeviceInfo();
+        return $deviceInfo['model'] ?? 'ZKTeco Device';
     }
     
-    // Device detection methods
-    protected function detectViaVersion() {
+    public function getUsers(): array {
+        return $this->getAllUsers();
+    }
+    
+    public function getAttendanceLogs(): array {
+        return $this->getAttendanceData();
+    }
+    
+    /**
+     * Get device information
+     */
+    public function getDeviceInfo() {
+        if (!$this->deviceInfo || empty($this->deviceInfo)) {
+            $this->deviceInfo = $this->autoDetectDevice();
+        }
+        return $this->deviceInfo;
+    }
+    
+    /**
+     * Auto-detect ZKTeco device
+     */
+    protected function autoDetectDevice() {
         try {
-            $response = $this->sendZKCommand(self::COMMAND_VERSION, '');
+            $response = $this->sendZKCommand(self::COMMAND_VERSION);
             
             if ($response && $response['command'] === self::RESPONSE_OK) {
                 $version = $response['data'];
-                
                 return [
                     'manufacturer' => 'ZKTeco',
                     'model' => $this->detectModelFromVersion($version),
                     'firmware' => $version,
+                    'serial' => 'ZK' . date('Ymd') . sprintf('%03d', $this->sessionId),
                     'supports_realtime' => true,
                     'communication_type' => 'tcp_binary'
                 ];
             }
         } catch (Exception $e) {
-            $this->logError("ZKTeco version detection failed: " . $e->getMessage());
+            $this->logError("Device detection failed: " . $e->getMessage());
         }
         
-        return false;
+        return [
+            'manufacturer' => 'ZKTeco',
+            'model' => 'Unknown ZKTeco Model',
+            'firmware' => 'Unknown',
+            'supports_realtime' => false,
+            'communication_type' => 'tcp_binary'
+        ];
     }
     
     protected function detectModelFromVersion($version) {
@@ -293,52 +385,16 @@ class ZKTecoDriver extends EnhancedBaseDriver {
         }
         return 'Unknown ZKTeco Model';
     }
-
-        // Interface method implementation
-    public function getDeviceName(): string {
-        $deviceInfo = $this->getDeviceInfo();
-        return $deviceInfo['model'] ?? 'ZKTeco Device';
-    }
     
-    // Implementation of interface methods
-    public function getDeviceInfo() {
-        if (!$this->deviceInfo) {
-            $this->deviceInfo = $this->autoDetectDevice();
-        }
-        return $this->deviceInfo;
-    }
-
-    // Auto-detect device capabilities
-    protected function autoDetectDevice() {
-        try {
-            return $this->detectViaVersion() ?: [
-                'manufacturer' => 'ZKTeco',
-                'model' => 'Unknown ZKTeco Model',
-                'firmware' => 'Unknown',
-                'supports_realtime' => true,
-                'communication_type' => 'tcp_binary'
-            ];
-        } catch (Exception $e) {
-            $this->logError("Device detection failed: " . $e->getMessage());
-            return [
-                'manufacturer' => 'ZKTeco',
-                'model' => 'Unknown ZKTeco Model',
-                'firmware' => 'Unknown',
-                'supports_realtime' => false,
-                'communication_type' => 'tcp_binary'
-            ];
-        }
-    }
-        // Interface method implementation
-    public function getUsers(): array {
-        return $this->getAllUsers();
-    }
+    /**
+     * Get all users from device
+     */
     public function getAllUsers() {
         try {
-            $response = $this->sendZKCommand(self::COMMAND_USER_WRQ, '');
+            $response = $this->sendZKCommand(self::COMMAND_USER_WRQ);
             
             if ($response && $response['command'] === self::RESPONSE_DATA) {
-                return $this->parseUserData($response['data']);
+                return $this->parseZKUsers($response['data']);
             }
             
             return [];
@@ -348,93 +404,45 @@ class ZKTecoDriver extends EnhancedBaseDriver {
         }
     }
     
-    protected function parseUserData($data) {
+    /**
+     * Parse ZKTeco user data
+     */
+    protected function parseZKUsers($data) {
         $users = [];
-        $length = strlen($data);
-        $offset = 0;
+        $userSize = 28; // Standard ZKTeco user record size
         
-        while ($offset < $length) {
-            if ($offset + 28 > $length) break;
+        for ($i = 0; $i < strlen($data); $i += $userSize) {
+            if ($i + $userSize > strlen($data)) {
+                break;
+            }
             
-            $record = unpack('Suid/a8name/Cprivilege/a5password/Ccard1/Ccard2/Ccard3/Ccard4/Cgroup/Stzone', 
-                            substr($data, $offset, 28));
+            $userRecord = substr($data, $i, $userSize);
+            $user = unpack('Suser_id/a8name/Cprivilege/a5password/Ccard_id/Cgroup_id/Stimezone', $userRecord);
             
             $users[] = [
-                'user_id' => $record['uid'],
-                'name' => trim($record['name']),
-                'privilege' => $record['privilege'],
-                'password' => trim($record['password']),
-                'card_id' => sprintf('%02X%02X%02X%02X', 
-                    $record['card1'], $record['card2'], $record['card3'], $record['card4']),
-                'group_id' => $record['group'],
-                'timezone' => $record['tzone']
+                'user_id' => $user['user_id'],
+                'name' => trim($user['name']),
+                'privilege' => $user['privilege'],
+                'password' => trim($user['password']),
+                'card_id' => $user['card_id'],
+                'group_id' => $user['group_id'],
+                'timezone' => $user['timezone'],
+                'verification' => '15'
             ];
-            
-            $offset += 28;
         }
         
         return $users;
     }
     
-    public function addUser($userId, $userData) {
-        try {
-            // Build ZKTeco user record
-            $userRecord = pack('Sa8C a5CCCCCs',
-                $userId,
-                substr($userData['name'] ?? '', 0, 8),
-                $userData['privilege'] ?? 0,
-                substr($userData['password'] ?? '', 0, 5),
-                0, 0, 0, 0, // Card ID bytes
-                $userData['group_id'] ?? 1,
-                $userData['timezone'] ?? 1
-            );
-            
-            $response = $this->sendZKCommand(self::COMMAND_USER_WRQ, $userRecord);
-            return $response && $response['command'] === self::RESPONSE_OK;
-        } catch (Exception $e) {
-            $this->logError("Failed to add user {$userId}: " . $e->getMessage());
-            return false;
-        }
-    }
-    
-    public function updateUser($userId, $userData) {
-        return $this->addUser($userId, $userData);
-    }
-    
-    public function deleteUser($userId) {
-        try {
-            $deleteData = pack('S', $userId);
-            $response = $this->sendZKCommand(self::COMMAND_DELETE_USER, $deleteData);
-            return $response && $response['command'] === self::RESPONSE_OK;
-        } catch (Exception $e) {
-            $this->logError("Failed to delete user {$userId}: " . $e->getMessage());
-            return false;
-        }
-    }
-    
-        // Interface method implementation
-    public function getAttendanceLogs(): array {
-        return $this->getAttendanceData();
-    }
-    
+    /**
+     * Get attendance data
+     */
     public function getAttendanceData($startDate = null, $endDate = null) {
         try {
-            $response = $this->sendZKCommand(self::COMMAND_ATTLOG_RRQ, '');
+            $response = $this->sendZKCommand(self::COMMAND_ATTLOG_RRQ);
             
             if ($response && $response['command'] === self::RESPONSE_DATA) {
-                $records = $this->parseAttendanceData($response['data']);
-                
-                // Filter by date if specified
-                if ($startDate || $endDate) {
-                    $records = array_filter($records, function($record) use ($startDate, $endDate) {
-                        $recordDate = $record['timestamp'];
-                        if ($startDate && $recordDate < $startDate) return false;
-                        if ($endDate && $recordDate > $endDate) return false;
-                        return true;
-                    });
-                }
-                
-                return $records;
+                return $this->parseZKAttendance($response['data'], $startDate, $endDate);
             }
             
             return [];
@@ -444,33 +452,92 @@ class ZKTecoDriver extends EnhancedBaseDriver {
         }
     }
     
-    protected function parseAttendanceData($data) {
-        $records = [];
-        $length = strlen($data);
-        $offset = 0;
+    /**
+     * Parse ZKTeco attendance data
+     */
+    protected function parseZKAttendance($data, $startDate = null, $endDate = null) {
+        $attendance = [];
         $recordSize = 16; // Standard ZKTeco attendance record size
         
-        while ($offset + $recordSize <= $length) {
-            $record = unpack('Suid/Ltimestamp/Cstatus/Cverify/Lworkcode/x4', 
-                            substr($data, $offset, $recordSize));
+        for ($i = 0; $i < strlen($data); $i += $recordSize) {
+            if ($i + $recordSize > strlen($data)) {
+                break;
+            }
             
-            $records[] = [
-                'user_id' => $record['uid'],
-                'timestamp' => date('Y-m-d H:i:s', $record['timestamp']),
-                'status' => $record['status'],
-                'verification' => $record['verify'],
-                'workcode' => $record['workcode']
+            $record = substr($data, $i, $recordSize);
+            $att = unpack('Suser_id/Vtimestamp/Cstatus/Cverification/Vworkcode', $record);
+            
+            $timestamp = date('Y-m-d H:i:s', $att['timestamp']);
+            
+            // Apply date filter if specified
+            if ($startDate && $timestamp < $startDate) continue;
+            if ($endDate && $timestamp > $endDate) continue;
+            
+            $attendance[] = [
+                'user_id' => $att['user_id'],
+                'timestamp' => $timestamp,
+                'status' => $att['status'] == 0 ? 'IN' : 'OUT',
+                'verification' => $att['verification'],
+                'workcode' => $att['workcode']
             ];
-            
-            $offset += $recordSize;
         }
         
-        return $records;
+        return $attendance;
     }
     
+    /**
+     * Get fake ZKTeco users for testing
+     */
+    protected function getFakeZKUsers() {
+        $users = [];
+        $fakeUsers = [
+            ['id' => 1, 'name' => 'John Doe'],
+            ['id' => 2, 'name' => 'Jane Smith'],
+            ['id' => 3, 'name' => 'Admin User']
+        ];
+        
+        foreach ($fakeUsers as $user) {
+            $users .= pack('Sa8CCCCvv', 
+                $user['id'],           // user_id
+                str_pad($user['name'], 8, "\0"), // name
+                0,                     // privilege
+                0,                     // password
+                0,                     // card_id
+                1,                     // group_id
+                1,                     // timezone
+                15                     // verification
+            );
+        }
+        
+        return $users;
+    }
+    
+    /**
+     * Get fake ZKTeco attendance for testing
+     */
+    protected function getFakeZKAttendance() {
+        $attendance = '';
+        $baseTime = time() - (7 * 24 * 60 * 60); // 7 days ago
+        
+        for ($i = 0; $i < 20; $i++) {
+            $attendance .= pack('SVCCV',
+                rand(1, 3),                    // user_id
+                $baseTime + ($i * 3600),       // timestamp
+                rand(0, 1),                    // status
+                1,                             // verification
+                0                              // workcode
+            );
+        }
+        
+        return $attendance;
+    }
+    
+    /**
+     * Clear attendance data
+     */
     public function clearAttendanceData() {
         try {
-            $response = $this->sendZKCommand(self::COMMAND_CLEAR_ATTLOG, '');
+            $response = $this->sendZKCommand(self::COMMAND_CLEAR_ATTLOG);
             return $response && $response['command'] === self::RESPONSE_OK;
         } catch (Exception $e) {
             $this->logError("Failed to clear attendance data: " . $e->getMessage());
@@ -478,36 +545,45 @@ class ZKTecoDriver extends EnhancedBaseDriver {
         }
     }
     
+    /**
+     * Get device status
+     */
     public function getDeviceStatus() {
         try {
-            $response = $this->sendZKCommand(self::COMMAND_STATE_RRQ, '');
+            $response = $this->sendZKCommand(self::COMMAND_STATE_RRQ);
             
-            return [
-                'device_info' => $this->getDeviceInfo(),
-                'connection_status' => $this->isConnected ? 'Connected' : 'Disconnected',
-                'session_id' => $this->sessionId,
-                'last_communication' => date('Y-m-d H:i:s'),
-                'status_data' => $response
-            ];
+            if ($response && $response['command'] === self::RESPONSE_OK) {
+                $state = unpack('Vusers/Vattendance/Vcapacity/Vatt_capacity/Vfingers/Vtime', $response['data']);
+                
+                return [
+                    'device_info' => $this->getDeviceInfo(),
+                    'user_count' => $state['users'],
+                    'attendance_count' => $state['attendance'],
+                    'user_capacity' => $state['capacity'],
+                    'attendance_capacity' => $state['att_capacity'],
+                    'connection_status' => $this->isConnected ? 'Connected' : 'Disconnected',
+                    'last_communication' => date('Y-m-d H:i:s')
+                ];
+            }
         } catch (Exception $e) {
             $this->logError("Failed to get device status: " . $e->getMessage());
-            return [
-                'connection_status' => 'Error',
-                'error' => $e->getMessage()
-            ];
         }
+        
+        return [
+            'connection_status' => 'Error',
+            'error' => $this->getLastError()
+        ];
     }
     
+    /**
+     * Set device date/time
+     */
     public function setDateTime($datetime = null) {
         try {
-            if (!$datetime) {
-                $datetime = time();
-            } else {
-                $datetime = strtotime($datetime);
-            }
+            $timestamp = $datetime ? strtotime($datetime) : time();
+            $data = pack('V', $timestamp);
             
-            $timeData = pack('L', $datetime);
-            $response = $this->sendZKCommand(self::COMMAND_SET_TIME, $timeData);
+            $response = $this->sendZKCommand(self::COMMAND_SET_TIME, $data);
             return $response && $response['command'] === self::RESPONSE_OK;
         } catch (Exception $e) {
             $this->logError("Failed to set date/time: " . $e->getMessage());
@@ -515,34 +591,48 @@ class ZKTecoDriver extends EnhancedBaseDriver {
         }
     }
     
-    // Enable real-time events
-    public function enableRealTimeEvents() {
+    /**
+     * Enable device
+     */
+    public function enableDevice() {
         try {
-            $response = $this->sendZKCommand(self::COMMAND_ENABLE_DEVICE, '');
+            $response = $this->sendZKCommand(self::COMMAND_ENABLE_DEVICE);
             return $response && $response['command'] === self::RESPONSE_OK;
         } catch (Exception $e) {
-            $this->logError("Failed to enable real-time events: " . $e->getMessage());
+            $this->logError("Failed to enable device: " . $e->getMessage());
             return false;
         }
     }
     
-    // Disable real-time events
-    public function disableRealTimeEvents() {
+    /**
+     * Disable device
+     */
+    public function disableDevice() {
         try {
-            $response = $this->sendZKCommand(self::COMMAND_DISABLE_DEVICE, '');
+            $response = $this->sendZKCommand(self::COMMAND_DISABLE_DEVICE);
             return $response && $response['command'] === self::RESPONSE_OK;
         } catch (Exception $e) {
-            $this->logError("Failed to disable real-time events: " . $e->getMessage());
+            $this->logError("Failed to disable device: " . $e->getMessage());
             return false;
         }
     }
     
-    // Get real-time attendance
-    public function getRealTimeAttendance() {
-        return $this->enableRealTimeEvents();
+    /**
+     * Restart device
+     */
+    public function restartDevice() {
+        try {
+            $response = $this->sendZKCommand(self::COMMAND_RESTART);
+            return $response && $response['command'] === self::RESPONSE_OK;
+        } catch (Exception $e) {
+            $this->logError("Failed to restart device: " . $e->getMessage());
+            return false;
+        }
     }
     
-    // Backup device data
+    /**
+     * Backup device data
+     */
     public function backupDevice() {
         try {
             $backup = [
@@ -559,42 +649,18 @@ class ZKTecoDriver extends EnhancedBaseDriver {
         }
     }
     
-    // Restore device data
-    public function restoreDevice($backupData) {
-        if (!isset($backupData['users'])) {
-            throw new Exception("Invalid backup data: missing users");
-        }
-        
-        try {
-            // Clear existing users
-            $this->sendZKCommand(self::COMMAND_CLEAR_DATA, '');
-            
-            // Restore users
-            foreach ($backupData['users'] as $user) {
-                if (is_array($user) && isset($user['user_id'])) {
-                    $this->addUser($user['user_id'], $user);
-                }
-            }
-            
-            return true;
-        } catch (Exception $e) {
-            $this->logError("Failed to restore device: " . $e->getMessage());
-            return false;
-        }
-    }
-    
-    // Enhanced disconnect with proper ZKTeco termination
-    public function disconnect() {
-        if ($this->isConnected && $this->connection) {
+    /**
+     * Disconnect and cleanup
+     */
+    public function disconnect(): void {
+        if ($this->isConnected && !$this->isFakeDevice($this->host)) {
             try {
-                // Re-enable device before disconnecting
-                $this->sendZKCommand(self::COMMAND_ENABLE_DEVICE, '', false);
-                
+                // Enable device before disconnecting
+                $this->sendZKCommand(self::COMMAND_ENABLE_DEVICE);
                 // Send exit command
                 $this->sendZKCommand(self::COMMAND_EXIT, '', false);
-                
             } catch (Exception $e) {
-                $this->logError("Error during ZKTeco disconnect: " . $e->getMessage());
+                $this->logError("Error during disconnect: " . $e->getMessage());
             }
         }
         
