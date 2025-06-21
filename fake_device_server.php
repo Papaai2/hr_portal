@@ -9,7 +9,7 @@ set_time_limit(0);
 require_once __DIR__ . '/app/core/drivers/lib/BinaryHelper.php';
 
 $ip = '127.0.0.1';
-$port = 8099;
+$port = 8099; // Fake Fingertec server port for testing
 $user_db_file = __DIR__ . '/tmp/fingertec_users.json';
 
 function load_fingertec_users(string $file): array {

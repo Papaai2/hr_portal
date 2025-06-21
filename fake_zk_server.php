@@ -9,7 +9,7 @@ set_time_limit(0);
 require_once __DIR__ . '/app/core/drivers/lib/BinaryHelper.php';
 
 $ip = '127.0.0.1';
-$port = 4370;
+$port = 8100; // Fake ZKTeco server port for testing
 $user_db_file = __DIR__ . '/tmp/zk_users.json';
 
 function load_users(string $file): array {

@@ -3,7 +3,7 @@
 // FINAL ENHANCED VERSION with Status Check and fixed Modal logic
 
 require_once __DIR__ . '/../app/bootstrap.php';
-require_once '../app/core/drivers/DeviceDriverInterface.php';
+require_once __DIR__ . '/../app/core/drivers/EnhancedDriverFramework.php';
 require_once __DIR__ . '/../app/core/drivers/FingertecDriver.php';
 require_once __DIR__ . '/../app/core/drivers/ZKTecoDriver.php';
 
@@ -50,8 +50,12 @@ $devices = $pdo->query("SELECT * FROM devices ORDER BY name ASC")->fetchAll(PDO:
 function get_driver(?string $brand): ?DeviceDriverInterface {
     if (!$brand) return null;
     $brand = strtolower($brand);
-    if ($brand === 'fingertec') return new FingertecDriver();
-    if ($brand === 'zkteco') return new ZKTecoDriver();
+    try {
+        if ($brand === 'fingertec') return new FingertecDriver();
+        if ($brand === 'zkteco') return new ZKTecoDriver();
+    } catch (Exception $e) {
+        error_log("Failed to create driver for brand {$brand}: " . $e->getMessage());
+    }
     return null;
 }
 

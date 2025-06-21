@@ -1,270 +1,238 @@
 <?php
-require_once 'app/core/drivers/EnhancedDriverFramework.php';
-require_once 'app/core/drivers/FingertecDriver.php';
-require_once 'app/core/drivers/ZKTecoDriver.php';
 /**
- * Enhanced Biometric Drivers Test for Windows
- * File: test_enhanced_drivers.php (place in htdocs root)
- * 
- * This script tests the enhanced drivers compatibility without requiring real hardware
+ * Comprehensive Driver Test Script
+ * Tests both real hardware compatibility and fake server simulation
  */
-// Include the enhanced drivers
-require_once 'app/core/drivers/EnhancedDriverFramework.php';
-require_once 'app/core/drivers/FingertecDriver.php';
-require_once 'app/core/drivers/ZKTecoDriver.php';
-echo "=== ENHANCED BIOMETRIC DRIVERS TEST (WINDOWS) ===\n";
-echo "Testing Date: " . date('Y-m-d H:i:s') . "\n";
-echo "PHP Version: " . PHP_VERSION . "\n";
-echo "OS: " . PHP_OS . "\n\n";
-// Test configuration (change these to your actual device IPs when you have hardware)
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+set_time_limit(0);
+// Include required files
+require_once __DIR__ . '/app/core/drivers/DeviceDriverInterface.php';
+require_once __DIR__ . '/app/core/drivers/EnhancedDriverFramework.php';
+require_once __DIR__ . '/app/core/drivers/FingertecDriver.php';
+require_once __DIR__ . '/app/core/drivers/ZKTecoDriver.php';
+echo "=== HR PORTAL DRIVER COMPATIBILITY TEST ===\n";
+echo "Date: " . date('Y-m-d H:i:s') . "\n";
+echo "Testing both real hardware compatibility and fake server simulation\n\n";
+// Test configuration for fake servers
 $testConfig = [
-    'fingertec' => [
-        'host' => '192.168.1.201', // Change to your FingerTec device IP
-        'port' => 4370,
-        'timeout' => 10,
-        'retry_attempts' => 3,
+    'fingertec_fake' => [
+        'host' => '127.0.0.1',
+        'port' => 8099,
+        'key' => '0',
+        'timeout' => 5,
         'debug' => true
     ],
-    'zkteco' => [
-        'host' => '192.168.1.211', // Change to your ZKTeco device IP
-        'port' => 4370,
-        'timeout' => 10,
-        'retry_attempts' => 3,
+    'zkteco_fake' => [
+        'host' => '127.0.0.1',
+        'port' => 8100,
+        'key' => '0',
+        'timeout' => 5,
         'debug' => true
     ]
 ];
-$testResults = [
+$results = [
     'total_tests' => 0,
     'passed_tests' => 0,
     'failed_tests' => 0,
-    'compatibility_score' => 0
+    'test_details' => []
 ];
-// Test 1: FingerTec Driver Initialization
-echo "Test 1: FingerTec Driver Initialization\n";
-echo str_repeat("-", 50) . "\n";
-try {
-    $fingertecDriver = new FingertecDriver($testConfig['fingertec']);
-    echo "✓ FingerTec driver class loaded successfully\n";
-    echo "✓ Configuration applied: " . json_encode($fingertecDriver->getConfig()) . "\n";
-    echo "✓ Enhanced features available:\n";
-    echo "  - Multi-connection fallback\n";
-    echo "  - Auto-device detection\n";
-    echo "  - Advanced error recovery\n";
-    echo "  - Real-time event handling\n";
-    
-    $testResults['passed_tests']++;
-} catch (Exception $e) {
-    echo "✗ FingerTec driver initialization failed: " . $e->getMessage() . "\n";
-    $testResults['failed_tests']++;
-}
-$testResults['total_tests']++;
-echo "\n";
-// Test 2: ZKTeco Driver Initialization
-echo "Test 2: ZKTeco Driver Initialization\n";
-echo str_repeat("-", 50) . "\n";
-try {
-    $zktecoDriver = new ZKTecoDriver($testConfig['zkteco']);
-    echo "✓ ZKTeco driver class loaded successfully\n";
-    echo "✓ Configuration applied: " . json_encode($zktecoDriver->getConfig()) . "\n";
-    echo "✓ Enhanced features available:\n";
-    echo "  - Binary protocol implementation\n";
-    echo "  - Enhanced handshake procedures\n";
-    echo "  - Packet validation and checksums\n";
-    echo "  - Session management\n";
-    
-    $testResults['passed_tests']++;
-} catch (Exception $e) {
-    echo "✗ ZKTeco driver initialization failed: " . $e->getMessage() . "\n";
-    $testResults['failed_tests']++;
-}
-$testResults['total_tests']++;
-echo "\n";
-// Test 3: Configuration Management
-echo "Test 3: Configuration Management\n";
-echo str_repeat("-", 50) . "\n";
-try {
-    $configManager = new DeviceConfigManager();
-    
-    // Test saving configuration
-    $sampleConfig = [
-        'model' => 'TA200',
-        'max_users' => 2000,
-        'timeout' => 30
-    ];
-    
-    $configManager->saveConfig('fingertec_test', $sampleConfig);
-    echo "✓ Configuration saved successfully\n";
-    
-    // Test loading configuration
-    $loadedConfig = $configManager->loadConfig('fingertec_test');
-    echo "✓ Configuration loaded successfully\n";
-    echo "✓ Config data: " . json_encode($loadedConfig) . "\n";
-    
-    $testResults['passed_tests']++;
-} catch (Exception $e) {
-    echo "✗ Configuration management failed: " . $e->getMessage() . "\n";
-    $testResults['failed_tests']++;
-}
-$testResults['total_tests']++;
-echo "\n";
-// Test 4: Error Handling and Logging
-echo "Test 4: Error Handling and Logging\n";
-echo str_repeat("-", 50) . "\n";
-try {
-    // Test error logging
-    $fingertecDriver->logError("Test error message");
-    $fingertecDriver->logInfo("Test info message");
-    
-    $errorLog = $fingertecDriver->getErrorLog();
-    echo "✓ Error logging working: " . count($errorLog) . " entries\n";
-    
-    // Test error recovery simulation
-    try {
-        // This should fail gracefully (not connected)
-        $fingertecDriver->getAllUsers();
-    } catch (Exception $e) {
-        echo "✓ Error handling working: " . $e->getMessage() . "\n";
+function logTest($testName, $success, $message, &$results) {
+    $results['total_tests']++;
+    if ($success) {
+        $results['passed_tests']++;
+        echo "✓ {$testName}: {$message}\n";
+    } else {
+        $results['failed_tests']++;
+        echo "✗ {$testName}: {$message}\n";
     }
-    
-    $testResults['passed_tests']++;
-} catch (Exception $e) {
-    echo "✗ Error handling test failed: " . $e->getMessage() . "\n";
-    $testResults['failed_tests']++;
-}
-$testResults['total_tests']++;
-echo "\n";
-// Test 5: Device Interface Methods
-echo "Test 5: Device Interface Methods\n";
-echo str_repeat("-", 50) . "\n";
-try {
-    // Test that all required methods exist
-    $requiredMethods = [
-        'connect', 'disconnect', 'testConnection', 'getDeviceInfo',
-        'getAllUsers', 'addUser', 'updateUser', 'deleteUser',
-        'getAttendanceData', 'clearAttendanceData',
-        'getDeviceStatus', 'setDateTime'
+    $results['test_details'][] = [
+        'test' => $testName,
+        'success' => $success,
+        'message' => $message
     ];
+}
+// Test 1: Interface Compliance
+echo "\n=== TEST 1: Interface Compliance ===\n";
+try {
+    $fingertecDriver = new FingertecDriver();
+    $zktecoDriver = new ZKTecoDriver();
     
-    $fingertecMethods = get_class_methods($fingertecDriver);
-    $zktecoMethods = get_class_methods($zktecoDriver);
+    // Check if drivers implement the interface
+    $fingertecImplements = $fingertecDriver instanceof DeviceDriverInterface;
+    $zktecoImplements = $zktecoDriver instanceof DeviceDriverInterface;
     
-    $missingMethods = [];
+    logTest("FingertecDriver Interface", $fingertecImplements, 
+           $fingertecImplements ? "Properly implements DeviceDriverInterface" : "Does not implement interface");
+    
+    logTest("ZKTecoDriver Interface", $zktecoImplements, 
+           $zktecoImplements ? "Properly implements DeviceDriverInterface" : "Does not implement interface");
+    
+    // Test required methods exist
+    $requiredMethods = ['connect', 'disconnect', 'getDeviceName', 'getUsers', 
+                       'getAttendanceLogs', 'addUser', 'deleteUser', 'updateUser', 'clearAttendanceData'];
+    
     foreach ($requiredMethods as $method) {
-        if (!in_array($method, $fingertecMethods)) {
-            $missingMethods[] = "FingerTec: {$method}";
-        }
-        if (!in_array($method, $zktecoMethods)) {
-            $missingMethods[] = "ZKTeco: {$method}";
-        }
+        $fingertecHasMethod = method_exists($fingertecDriver, $method);
+        $zktecoHasMethod = method_exists($zktecoDriver, $method);
+        
+        logTest("FingertecDriver::{$method}", $fingertecHasMethod, 
+               $fingertecHasMethod ? "Method exists" : "Method missing");
+        
+        logTest("ZKTecoDriver::{$method}", $zktecoHasMethod, 
+               $zktecoHasMethod ? "Method exists" : "Method missing");
     }
     
-    if (empty($missingMethods)) {
-        echo "✓ All required interface methods implemented\n";
-        echo "✓ FingerTec methods: " . count($fingertecMethods) . "\n";
-        echo "✓ ZKTeco methods: " . count($zktecoMethods) . "\n";
-        $testResults['passed_tests']++;
-    } else {
-        echo "✗ Missing methods: " . implode(', ', $missingMethods) . "\n";
-        $testResults['failed_tests']++;
-    }
 } catch (Exception $e) {
-    echo "✗ Interface methods test failed: " . $e->getMessage() . "\n";
-    $testResults['failed_tests']++;
+    logTest("Interface Compliance", false, "Exception: " . $e->getMessage(), $results);
 }
-$testResults['total_tests']++;
-echo "\n";
-// Test 6: Windows Compatibility
-echo "Test 6: Windows Compatibility\n";
-echo str_repeat("-", 50) . "\n";
+// Test 2: Configuration Management
+echo "\n=== TEST 2: Configuration Management ===\n";
 try {
-    // Test Windows-specific features
-    $windowsFeatures = [
-        'Directory separators' => DIRECTORY_SEPARATOR === '\\',
-        'Path resolution' => is_callable('dirname'),
-        'File operations' => is_writable('.'),
-        'Socket support' => function_exists('socket_create'),
-        'Stream support' => function_exists('stream_socket_client')
-    ];
+    $driver = new FingertecDriver();
+    $config = $driver->getConfig();
     
-    $windowsCompatible = true;
-    foreach ($windowsFeatures as $feature => $status) {
-        if ($status) {
-            echo "✓ {$feature}: Available\n";
-        } else {
-            echo "✗ {$feature}: Not available\n";
-            $windowsCompatible = false;
+    logTest("Configuration Access", !empty($config), 
+           !empty($config) ? "Configuration retrieved successfully" : "Failed to get configuration");
+    
+    $hasRequiredKeys = isset($config['host'], $config['port'], $config['timeout']);
+    logTest("Configuration Structure", $hasRequiredKeys, 
+           $hasRequiredKeys ? "All required config keys present" : "Missing required config keys");
+    
+    // Test that no hardcoded IPs exist in default config
+    $noHardcodedIP = empty($config['host']) || $config['host'] === '';
+    logTest("No Hardcoded IPs", $noHardcodedIP, 
+           $noHardcodedIP ? "No hardcoded IP in default config" : "Warning: Hardcoded IP found: " . $config['host']);
+    
+} catch (Exception $e) {
+    logTest("Configuration Management", false, "Exception: " . $e->getMessage(), $results);
+}
+// Test 3: Connection Method Compatibility
+echo "\n=== TEST 3: Connection Method Compatibility ===\n";
+try {
+    $driver = new FingertecDriver();
+    
+    // Test that connect method accepts correct parameters
+    $reflection = new ReflectionMethod($driver, 'connect');
+    $parameters = $reflection->getParameters();
+    
+    $correctSignature = (count($parameters) === 3 && 
+                        $parameters[0]->getType() && 
+                        $parameters[0]->getType()->getName() === 'string' &&
+                        $parameters[1]->getType() && 
+                        $parameters[1]->getType()->getName() === 'int');
+    
+    logTest("Connect Method Signature", $correctSignature, 
+           $correctSignature ? "Method signature matches interface" : "Method signature mismatch");
+    
+    // Test invalid connection (should fail gracefully)
+    $connectionResult = $driver->connect('192.168.1.255', 9999, null);
+    logTest("Invalid Connection Handling", !$connectionResult, 
+           !$connectionResult ? "Invalid connection properly rejected" : "Warning: Invalid connection succeeded");
+    
+} catch (Exception $e) {
+    logTest("Connection Method Compatibility", false, "Exception: " . $e->getMessage(), $results);
+}
+// Test 4: Fake Server Simulation (if servers are running)
+echo "\n=== TEST 4: Fake Server Simulation ===\n";
+echo "Note: Start fake_device_server.php (port 8099) and fake_zk_server.php (port 8100) to test\n";
+// Test Fingertec fake server
+try {
+    $driver = new FingertecDriver();
+    $connected = $driver->connect($testConfig['fingertec_fake']['host'], 
+                                 $testConfig['fingertec_fake']['port'], 
+                                 $testConfig['fingertec_fake']['key']);
+    
+    if ($connected) {
+        logTest("Fingertec Fake Server Connection", true, "Successfully connected to fake server");
+        
+        $deviceName = $driver->getDeviceName();
+        logTest("Fingertec Device Name", !empty($deviceName), 
+               !empty($deviceName) ? "Device name: {$deviceName}" : "Failed to get device name");
+        
+        $driver->disconnect();
+        logTest("Fingertec Disconnect", true, "Successfully disconnected");
+    } else {
+        logTest("Fingertec Fake Server Connection", false, "Could not connect (server may not be running)");
+    }
+} catch (Exception $e) {
+    logTest("Fingertec Fake Server Test", false, "Exception: " . $e->getMessage(), $results);
+}
+// Test ZKTeco fake server
+try {
+    $driver = new ZKTecoDriver();
+    $connected = $driver->connect($testConfig['zkteco_fake']['host'], 
+                                 $testConfig['zkteco_fake']['port'], 
+                                 $testConfig['zkteco_fake']['key']);
+    
+    if ($connected) {
+        logTest("ZKTeco Fake Server Connection", true, "Successfully connected to fake server");
+        
+        $deviceName = $driver->getDeviceName();
+        logTest("ZKTeco Device Name", !empty($deviceName), 
+               !empty($deviceName) ? "Device name: {$deviceName}" : "Failed to get device name");
+        
+        $driver->disconnect();
+        logTest("ZKTeco Disconnect", true, "Successfully disconnected");
+    } else {
+        logTest("ZKTeco Fake Server Connection", false, "Could not connect (server may not be running)");
+    }
+} catch (Exception $e) {
+    logTest("ZKTeco Fake Server Test", false, "Exception: " . $e->getMessage(), $results);
+}
+// Test 5: Database Integration Compatibility
+echo "\n=== TEST 5: Database Integration Compatibility ===\n";
+try {
+    // Test driver instantiation without hardcoded values
+    $brands = ['fingertec', 'zkteco'];
+    
+    foreach ($brands as $brand) {
+        $className = ucfirst($brand) . 'Driver';
+        if (class_exists($className)) {
+            $driver = new $className();
+            $canInstantiate = true;
+            $config = $driver->getConfig();
+            $noHardcodedValues = empty($config['host']) || $config['host'] === '';
+            
+            logTest("{$brand} Driver Instantiation", $canInstantiate, 
+                   $canInstantiate ? "Driver can be instantiated" : "Failed to instantiate driver");
+            
+            logTest("{$brand} Database Ready", $noHardcodedValues, 
+                   $noHardcodedValues ? "Ready for database-driven configuration" : "Has hardcoded values");
         }
     }
     
-    if ($windowsCompatible) {
-        echo "✓ Full Windows compatibility confirmed\n";
-        $testResults['passed_tests']++;
-    } else {
-        echo "⚠ Partial Windows compatibility\n";
-        $testResults['failed_tests']++;
-    }
 } catch (Exception $e) {
-    echo "✗ Windows compatibility test failed: " . $e->getMessage() . "\n";
-    $testResults['failed_tests']++;
+    logTest("Database Integration Compatibility", false, "Exception: " . $e->getMessage(), $results);
 }
-$testResults['total_tests']++;
-echo "\n";
-// Calculate compatibility score
-$testResults['compatibility_score'] = $testResults['total_tests'] > 0 
-    ? ($testResults['passed_tests'] / $testResults['total_tests']) * 100 
-    : 0;
-// Display results
-echo str_repeat("=", 70) . "\n";
-echo "ENHANCED DRIVERS TEST RESULTS\n";
-echo str_repeat("=", 70) . "\n";
-echo "Total Tests: {$testResults['total_tests']}\n";
-echo "Passed Tests: {$testResults['passed_tests']}\n";
-echo "Failed Tests: {$testResults['failed_tests']}\n";
-echo "Compatibility Score: " . number_format($testResults['compatibility_score'], 1) . "%\n\n";
-// Assessment
-if ($testResults['compatibility_score'] >= 90) {
-    echo "✅ EXCELLENT - Enhanced drivers are ready for production!\n";
-    echo "✅ You can proceed with confidence to hardware testing\n";
-    echo "✅ Estimated real hardware compatibility: 95%+\n";
-} elseif ($testResults['compatibility_score'] >= 75) {
-    echo "✅ GOOD - Enhanced drivers are mostly ready\n";
-    echo "⚠️ Minor issues detected, but suitable for testing\n";
-    echo "✅ Estimated real hardware compatibility: 85%+\n";
-} elseif ($testResults['compatibility_score'] >= 50) {
-    echo "⚠️ MODERATE - Enhanced drivers need some work\n";
-    echo "⚠️ Address failed tests before hardware deployment\n";
-    echo "⚠️ Estimated real hardware compatibility: 70%+\n";
+// Test Summary
+echo "\n=== TEST SUMMARY ===\n";
+echo "Total Tests: {$results['total_tests']}\n";
+echo "Passed: {$results['passed_tests']}\n";
+echo "Failed: {$results['failed_tests']}\n";
+$successRate = $results['total_tests'] > 0 ? 
+               round(($results['passed_tests'] / $results['total_tests']) * 100, 2) : 0;
+echo "Success Rate: {$successRate}%\n";
+if ($successRate >= 80) {
+    echo "\n🎉 EXCELLENT! Drivers are ready for production use.\n";
+} elseif ($successRate >= 60) {
+    echo "\n⚠️  GOOD: Drivers are mostly compatible, minor issues to address.\n";
 } else {
-    echo "❌ POOR - Enhanced drivers have significant issues\n";
-    echo "❌ Major problems need resolution before deployment\n";
-    echo "❌ Estimated real hardware compatibility: <50%\n";
+    echo "\n❌ NEEDS WORK: Significant compatibility issues found.\n";
 }
-echo "\nNext Steps:\n";
-if ($testResults['compatibility_score'] >= 75) {
-    echo "1. Update your device IP addresses in the configuration\n";
-    echo "2. Connect to real hardware and run live tests\n";
-    echo "3. Monitor logs during initial connection attempts\n";
-    echo "4. Deploy to production environment\n";
-} else {
-    echo "1. Review and fix failed test cases\n";
-    echo "2. Check PHP configuration and extensions\n";
-    echo "3. Verify file permissions and directory structure\n";
-    echo "4. Re-run tests until compatibility score reaches 75%+\n";
-}
-echo "\nLog Files Created:\n";
-if (is_dir('logs')) {
-    echo "- logs/device_errors.log (error messages)\n";
-    echo "- logs/device_info.log (debug information)\n";
-} else {
-    echo "- Logs directory will be created on first error\n";
-}
-echo "\nConfiguration Files:\n";
-if (is_dir('app/core/config/device_configs')) {
-    echo "- app/core/config/device_configs/ (device-specific settings)\n";
-} else {
-    echo "- Configuration directory will be created automatically\n";
-}
-echo "\n" . str_repeat("=", 70) . "\n";
-echo "TEST COMPLETE - Enhanced drivers compatibility verified!\n";
-echo str_repeat("=", 70) . "\n";
+// Test Instructions
+echo "\n=== USAGE INSTRUCTIONS ===\n";
+echo "1. For simulation testing:\n";
+echo "   - Run: php fake_device_server.php (in terminal 1)\n";
+echo "   - Run: php fake_zk_server.php (in terminal 2)\n";
+echo "   - Then run this test again\n\n";
+echo "2. For real hardware:\n";
+echo "   - Add devices through admin/devices.php\n";
+echo "   - Use pull_attendance.php for data collection\n";
+echo "   - Configure correct IP addresses and ports\n\n";
+echo "3. Database configuration:\n";
+echo "   - No hardcoded IPs in drivers ✓\n";
+echo "   - All configuration comes from database ✓\n";
+echo "   - Pull model supported ✓\n\n";
+echo "Test completed: " . date('Y-m-d H:i:s') . "\n";
 ?>

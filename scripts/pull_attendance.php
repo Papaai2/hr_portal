@@ -27,7 +27,12 @@ foreach ($devices as $device) {
     echo "Processing device: {$device['name']} ({$device['ip_address']})\n";
 
     // Dynamically load the correct driver for the device brand
-    $driver_class = ucfirst($device['device_brand']) . 'Driver';
+$driver_class = ucfirst(strtolower($device['device_brand'])) . 'Driver';
+    
+    // Include required files
+    require_once __DIR__ . '/../app/core/drivers/DeviceDriverInterface.php';
+    require_once __DIR__ . '/../app/core/drivers/EnhancedDriverFramework.php';
+    
     $driver_file = __DIR__ . '/../app/core/drivers/' . $driver_class . '.php';
 
     if (!file_exists($driver_file)) {
@@ -35,8 +40,7 @@ foreach ($devices as $device) {
         continue;
     }
     
-    // The interface should be included to ensure driver compatibility
-require_once '../app/core/drivers/DeviceDriverInterface.php';
+
     require_once $driver_file;
     
     if (!class_exists($driver_class)) {
@@ -44,6 +48,7 @@ require_once '../app/core/drivers/DeviceDriverInterface.php';
         continue;
     }
 
+    // Create driver instance with empty config (will be set by connect method)
     $driver = new $driver_class();
 
     if (!$driver->connect($device['ip_address'], (int)$device['port'], $device['communication_key'])) {

@@ -53,7 +53,7 @@ class ZKTecoDriver extends EnhancedBaseDriver {
     
     protected function getDefaultConfig() {
         return [
-            'host' => '192.168.1.201',
+            'host' => '',
             'port' => 4370,
             'timeout' => 30,
             'retry_attempts' => 5,
@@ -293,6 +293,12 @@ class ZKTecoDriver extends EnhancedBaseDriver {
         }
         return 'Unknown ZKTeco Model';
     }
+
+        // Interface method implementation
+    public function getDeviceName(): string {
+        $deviceInfo = $this->getDeviceInfo();
+        return $deviceInfo['model'] ?? 'ZKTeco Device';
+    }
     
     // Implementation of interface methods
     public function getDeviceInfo() {
@@ -301,7 +307,32 @@ class ZKTecoDriver extends EnhancedBaseDriver {
         }
         return $this->deviceInfo;
     }
-    
+
+    // Auto-detect device capabilities
+    protected function autoDetectDevice() {
+        try {
+            return $this->detectViaVersion() ?: [
+                'manufacturer' => 'ZKTeco',
+                'model' => 'Unknown ZKTeco Model',
+                'firmware' => 'Unknown',
+                'supports_realtime' => true,
+                'communication_type' => 'tcp_binary'
+            ];
+        } catch (Exception $e) {
+            $this->logError("Device detection failed: " . $e->getMessage());
+            return [
+                'manufacturer' => 'ZKTeco',
+                'model' => 'Unknown ZKTeco Model',
+                'firmware' => 'Unknown',
+                'supports_realtime' => false,
+                'communication_type' => 'tcp_binary'
+            ];
+        }
+    }
+        // Interface method implementation
+    public function getUsers(): array {
+        return $this->getAllUsers();
+    }
     public function getAllUsers() {
         try {
             $response = $this->sendZKCommand(self::COMMAND_USER_WRQ, '');
@@ -379,6 +410,11 @@ class ZKTecoDriver extends EnhancedBaseDriver {
             $this->logError("Failed to delete user {$userId}: " . $e->getMessage());
             return false;
         }
+    }
+    
+        // Interface method implementation
+    public function getAttendanceLogs(): array {
+        return $this->getAttendanceData();
     }
     
     public function getAttendanceData($startDate = null, $endDate = null) {

@@ -17,10 +17,11 @@
  * Provides robust connection handling for Windows environments
  */
 abstract class EnhancedBaseDriver implements DeviceDriverInterface {
-    protected $host = '192.168.1.201';
+    protected $host = '';
     protected $port = 4370;
     protected $timeout = 30;
     protected $socket = null;
+    protected $connection = null; // Alias for socket to maintain compatibility
     protected $lastError = '';
     protected $isConnected = false;
     protected $deviceInfo = [];
@@ -97,134 +98,118 @@ abstract class EnhancedBaseDriver implements DeviceDriverInterface {
         }
         
         $this->logError("All connection methods failed");
-        return false;
-    }
-    
-    // TCP Socket connection (Windows compatible)
-    protected function connectViaTCPSocket() {
-        $context = stream_context_create([
-            'socket' => [
-                'so_reuseport' => false, // Windows doesn't support SO_REUSEPORT
-                'so_keepalive' => true,
-            ]
-        ]);
+  return false;
+}
+// TCP Socket connection (Windows compatible)
+protected function connectViaTCPSocket() {
+$context = stream_context_create([
+'socket' => [
+'so_reuseport' => false, // Windows doesn't support SO_REUSEPORT
+'so_keepalive' => true,
+]
+]);
+$this->socket = @stream_socket_client(
+"tcp://{$this->host}:{$this->port}",
+$errno,
+$errstr,
+$this->timeout,
+STREAM_CLIENT_CONNECT,
+$context
+);
+if (!$this->socket) {
+throw new Exception("TCP Socket connection failed: {$errstr} ({$errno})");
+}
         
-        $this->socket = @stream_socket_client(
-            "tcp://{$this->host}:{$this->port}",
-            $errno,
-            $errstr,
-            $this->timeout,
-            STREAM_CLIENT_CONNECT,
-            $context
-        );
-        
-        if (!$this->socket) {
-            throw new Exception("TCP Socket connection failed: {$errstr} ({$errno})");
-        }
-        
-        // Set non-blocking mode for better Windows compatibility
-        stream_set_blocking($this->socket, 0);
-        return true;
-    }
-    
-    // Fsockopen connection (fallback method)
-    protected function connectViaFsockopen() {
-        $this->socket = @fsockopen(
-            $this->host,
-            $this->port,
-            $errno,
-            $errstr,
-            $this->timeout
-        );
-        
-        if (!$this->socket) {
-            throw new Exception("Fsockopen connection failed: {$errstr} ({$errno})");
-        }
+        // Set connection alias for compatibility
+        $this->connection = $this->socket;
         
         return true;
-    }
-    
-    // Stream socket connection (alternative method)
-    protected function connectViaStreamSocket() {
-        $context = stream_context_create();
-        $this->socket = @stream_socket_client(
-            "tcp://{$this->host}:{$this->port}",
-            $errno,
-            $errstr,
-            $this->timeout,
-            STREAM_CLIENT_CONNECT,
-            $context
-        );
-        
-        if (!$this->socket) {
-            throw new Exception("Stream socket connection failed: {$errstr} ({$errno})");
-        }
-        
-        return true;
-    }
-    
-    // Verify connection is working
-    protected function verifyConnection() {
-        if (!$this->socket) {
-            return false;
-        }
-        
-        // Try to write/read to verify connection
-        try {
-            $testData = "PING\r\n";
-            $written = @fwrite($this->socket, $testData);
-            
-            if ($written === false) {
-                $this->logError("Connection verification failed: unable to write");
-                return false;
-            }
-            
-            // Give device time to respond
-            usleep(100000); // 100ms
-            
-            // Try to read response (non-blocking)
-            $response = @fread($this->socket, 1024);
-            
-            // Connection is verified if we can write (reading may timeout on some devices)
-            return true;
-            
-        } catch (Exception $e) {
-            $this->logError("Connection verification failed: " . $e->getMessage());
-            return false;
-        }
-    }
-    
-    // Disconnect from device
-    public function disconnect(): void {
-        if ($this->socket) {
-            @fclose($this->socket);
-            $this->socket = null;
-        }
-        $this->isConnected = false;
-        $this->logInfo("Disconnected from device");
-    }
-    
-    // Get device name - implementation depends on device protocol
-    public function getDeviceName(): string {
-        if (!$this->isConnected) {
-            return 'Not Connected';
-        }
-        
-        // This is a default implementation - should be overridden by specific drivers
-        return $this->deviceInfo['name'] ?? 'Unknown Device';
-    }
-    
-    // Get users - implementation depends on device protocol  
-    public function getUsers(): array {
-        if (!$this->isConnected) {
-            $this->logError("Cannot get users: not connected to device");
-            return [];
-        }
-        
-        // This is a default implementation - should be overridden by specific drivers
-        return [];
-    }
-    
+
+// Set non-blocking mode for better Windows compatibility
+stream_set_blocking($this->socket, 0);
+return true;
+}
+// Fsockopen connection (fallback method)
+protected function connectViaFsockopen() {
+$this->socket = @fsockopen(
+$this->host,
+$this->port,
+$errno,
+$errstr,
+$this->timeout
+);
+if (!$this->socket) {
+throw new Exception("Fsockopen connection failed: {$errstr} ({$errno})");
+}
+return true;
+}
+// Stream socket connection (alternative method)
+protected function connectViaStreamSocket() {
+$context = stream_context_create();
+$this->socket = @stream_socket_client(
+"tcp://{$this->host}:{$this->port}",
+$errno,
+$errstr,
+$this->timeout,
+STREAM_CLIENT_CONNECT,
+$context
+);
+if (!$this->socket) {
+throw new Exception("Stream socket connection failed: {$errstr} ({$errno})");
+}
+return true;
+}
+// Verify connection is working
+protected function verifyConnection() {
+if (!$this->socket) {
+return false;
+}
+// Try to write/read to verify connection
+try {
+$testData = "PING\r\n";
+$written = @fwrite($this->socket, $testData);
+if ($written === false) {
+$this->logError("Connection verification failed: unable to write");
+return false;
+}
+// Give device time to respond
+usleep(100000); // 100ms
+// Try to read response (non-blocking)
+$response = @fread($this->socket, 1024);
+// Connection is verified if we can write (reading may timeout on some devices)
+return true;
+} catch (Exception $e) {
+$this->logError("Connection verification failed: " . $e->getMessage());
+return false;
+}
+}
+// Disconnect from device
+public function disconnect(): void {
+if ($this->socket) {
+@fclose($this->socket);
+$this->socket = null;
+$this->connection = null;
+}
+$this->isConnected = false;
+$this->logInfo("Disconnected from device");
+}
+// Get device name - implementation depends on device protocol
+public function getDeviceName(): string {
+if (!$this->isConnected) {
+return 'Not Connected';
+}
+// This is a default implementation - should be overridden by specific drivers
+return $this->deviceInfo['name'] ?? 'Unknown Device';
+}
+// Get users - implementation depends on device protocol  
+public function getUsers(): array {
+if (!$this->isConnected) {
+$this->logError("Cannot get users: not connected to device");
+return [];
+}
+// This is a default implementation - should be overridden by specific drivers
+return [];
+}
     // Get attendance logs - implementation depends on device protocol
     public function getAttendanceLogs(): array {
         if (!$this->isConnected) {
@@ -235,69 +220,115 @@ abstract class EnhancedBaseDriver implements DeviceDriverInterface {
         // This is a default implementation - should be overridden by specific drivers
         return [];
     }
-    
-    // Logging methods
-    protected function logInfo($message) {
-        $this->log('INFO', $message);
-    }
-    
-    protected function logError($message) {
-        $this->log('ERROR', $message);
-        $this->lastError = $message;
-    }
-    
-    protected function logWarning($message) {
-        $this->log('WARNING', $message);
-    }
-    
-    protected function log($level, $message) {
-        $timestamp = date('Y-m-d H:i:s');
-        $logEntry = "[{$timestamp}] [{$level}] {$message}" . PHP_EOL;
-        
-        // Log to array for immediate access
-        $this->errorLog[] = $logEntry;
-        
-        // Also log to file if path is writable
-        if (is_writable($this->logPath)) {
-            $logFile = $this->logPath . DIRECTORY_SEPARATOR . 'device_driver_' . date('Y-m-d') . '.log';
-            @file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+
+    // Add user - implementation depends on device protocol
+    public function addUser(string $userId, array $userData): bool {
+        if (!$this->isConnected) {
+            $this->logError("Cannot add user: not connected to device");
+            return false;
         }
+        
+        // This is a default implementation - should be overridden by specific drivers
+        $this->logInfo("Adding user {$userId} (default implementation)");
+        return false;
     }
     
-    // Get last error
-    public function getLastError() {
-        return $this->lastError;
+    // Delete user - implementation depends on device protocol
+    public function deleteUser(string $userId): bool {
+        if (!$this->isConnected) {
+            $this->logError("Cannot delete user: not connected to device");
+            return false;
+        }
+        
+        // This is a default implementation - should be overridden by specific drivers
+        $this->logInfo("Deleting user {$userId} (default implementation)");
+        return false;
     }
     
-    // Get all error logs
-    public function getErrorLogs() {
-        return $this->errorLog;
+    // Update user - implementation depends on device protocol
+    public function updateUser(string $userId, array $userData): bool {
+        if (!$this->isConnected) {
+            $this->logError("Cannot update user: not connected to device");
+            return false;
+        }
+        
+        // This is a default implementation - should be overridden by specific drivers
+        $this->logInfo("Updating user {$userId} (default implementation)");
+        return false;
     }
     
-    // Check if connected
-    public function isConnected() {
-        return $this->isConnected;
+    // Clear attendance data - implementation depends on device protocol
+    public function clearAttendanceData(): bool {
+        if (!$this->isConnected) {
+            $this->logError("Cannot clear attendance data: not connected to device");
+            return false;
+        }
+        
+        // This is a default implementation - should be overridden by specific drivers
+        $this->logInfo("Clearing attendance data (default implementation)");
+        return false;
     }
-    
-    // Get configuration
-    public function getConfig() {
-        return $this->config;
+// Logging methods
+protected function logInfo($message) {
+$this->log('INFO', $message);
+}
+protected function logError($message) {
+$this->log('ERROR', $message);
+$this->lastError = $message;
+}
+protected function logWarning($message) {
+$this->log('WARNING', $message);
+}
+protected function log($level, $message) {
+$timestamp = date('Y-m-d H:i:s');
+$logEntry = "[{$timestamp}] [{$level}] {$message}" . PHP_EOL;
+// Log to array for immediate access
+$this->errorLog[] = $logEntry;
+// Also log to file if path is writable
+if (is_writable($this->logPath)) {
+$logFile = $this->logPath . DIRECTORY_SEPARATOR . 'device_driver_' . date('Y-m-d') . '.log';
+@file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+}
+}
+// Get last error
+public function getLastError() {
+return $this->lastError;
+}
+// Get all error logs
+public function getErrorLogs() {
+return $this->errorLog;
+}
+// Check if connected
+public function isConnected() {
+return $this->isConnected;
+}
+// Test connection is still alive
+    public function testConnection() {
+        if (!$this->isConnected || !$this->socket) {
+            return false;
+        }
+        
+        // Test by attempting to write a small amount of data
+        $resource = is_resource($this->socket);
+        return $resource && !feof($this->socket);
     }
-    
-    // Set configuration
-    public function setConfig($key, $value) {
-        $this->config[$key] = $value;
-    }
+// Get configuration
+public function getConfig() {
+return $this->config;
+}
+// Set configuration
+public function setConfig($key, $value) {
+$this->config[$key] = $value;
+}
 }
 // Example concrete implementation for ZKTeco devices
 class ZKTecoEnhancedDriver extends EnhancedBaseDriver {
-    
-    protected function getDefaultConfig() {
-        return [
-            'host' => '192.168.1.201',
-            'port' => 4370,
-            'timeout' => 30,
-            'retry_attempts' => 5,
+protected function getDefaultConfig() {
+return [
+'host' => '192.168.1.201',
+'port' => 4370,
+'timeout' => 30,
+'retry_attempts' => 5,
             'retry_delay' => 2,
             'device_type' => 'zkteco',
             'protocol_version' => '1.0'
