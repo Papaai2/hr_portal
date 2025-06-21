@@ -60,7 +60,7 @@ abstract class EnhancedBaseDriver implements DeviceDriverInterface {
 
                 if (method_exists($this, 'performHandshake')) {
                     if ($this->performHandshake()) {
-                        $this->isConnected = true; // CRITICAL: Set to true only after successful handshake
+                        $this->isConnected = true;
                         $this->logInfo("Connection and handshake successful.");
                         return true;
                     }
@@ -98,12 +98,24 @@ abstract class EnhancedBaseDriver implements DeviceDriverInterface {
         $this->logInfo("Disconnected from device {$this->host}");
     }
     
-    public function setConfig(array $config): void { /* ... */ }
+    public function setConfig(array $config): void {
+        $this->config = array_merge($this->config, $config);
+        foreach ($config as $key => $value) {
+            if (property_exists($this, $key)) {
+                $this->{$key} = $value;
+            }
+        }
+    }
+
     public function getLastError(): string { return $this->lastError; }
     public function isConnected(): bool { return $this->isConnected; }
-    protected function logInfo(string $message): void { /* ... */ }
-    protected function logError(string $message): void { /* ... */ }
-    private function log(string $level, string $message): void { /* ... */ }
+    protected function logInfo(string $message): void { $this->log('INFO', $message); }
+    protected function logError(string $message): void { $this->log('ERROR', $message); $this->lastError = $message; }
+    private function log(string $level, string $message): void {
+        $logFile = $this->logPath . '/device_driver_' . date('Y-m-d') . '.log';
+        $logEntry = "[" . date('Y-m-d H:i:s') . "] [{$level}] [{$this->host}] {$message}" . PHP_EOL;
+        @file_put_contents($logFile, $logEntry, FILE_APPEND);
+    }
     
     abstract public function getUsers(): array;
     abstract public function getAttendanceLogs(): array;
