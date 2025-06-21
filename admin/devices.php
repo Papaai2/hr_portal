@@ -3,7 +3,7 @@
 // FINAL ENHANCED VERSION with Status Check and fixed Modal logic
 
 require_once __DIR__ . '/../app/bootstrap.php';
-require_once __DIR__ . '/../app/core/drivers/DeviceDriverInterface.php';
+require_once '../app/core/drivers/DeviceDriverInterface.php';
 require_once __DIR__ . '/../app/core/drivers/FingertecDriver.php';
 require_once __DIR__ . '/../app/core/drivers/ZKTecoDriver.php';
 

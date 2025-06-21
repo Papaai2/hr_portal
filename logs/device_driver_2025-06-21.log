@@ -1,0 +1,85 @@
+[2025-06-21 13:15:44] [INFO] Attempting to connect to 127.0.0.1:4370
+[2025-06-21 13:15:44] [INFO] Attempting connection via tcp_socket
+[2025-06-21 13:15:45] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:15:49] [ERROR] Connection attempt 2 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:15:53] [ERROR] Connection attempt 3 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:15:57] [ERROR] Connection attempt 4 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:16:01] [ERROR] Connection attempt 5 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:16:01] [INFO] Attempting connection via fsockopen
+[2025-06-21 13:16:02] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:16:06] [ERROR] Connection attempt 2 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:16:10] [ERROR] Connection attempt 3 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:16:14] [ERROR] Connection attempt 4 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:16:18] [ERROR] Connection attempt 5 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:16:18] [INFO] Attempting connection via stream_socket
+[2025-06-21 13:16:19] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:16:23] [ERROR] Connection attempt 2 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:16:27] [ERROR] Connection attempt 3 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:16:31] [ERROR] Connection attempt 4 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:16:35] [ERROR] Connection attempt 5 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:16:35] [ERROR] All connection methods failed
+[2025-06-21 13:16:35] [INFO] Attempting to connect to 127.0.0.1:8099
+[2025-06-21 13:16:35] [INFO] Attempting connection via tcp_socket
+[2025-06-21 13:16:36] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:16:40] [ERROR] Connection attempt 2 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:16:44] [ERROR] Connection attempt 3 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:16:48] [ERROR] Connection attempt 4 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:16:52] [ERROR] Connection attempt 5 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:16:52] [INFO] Attempting connection via fsockopen
+[2025-06-21 13:16:53] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:16:57] [ERROR] Connection attempt 2 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:17:01] [ERROR] Connection attempt 3 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:17:05] [ERROR] Connection attempt 4 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:17:09] [ERROR] Connection attempt 5 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:17:09] [INFO] Attempting connection via stream_socket
+[2025-06-21 13:17:10] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:17:14] [ERROR] Connection attempt 2 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:17:18] [ERROR] Connection attempt 3 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:17:22] [ERROR] Connection attempt 4 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:17:26] [ERROR] Connection attempt 5 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:17:26] [ERROR] All connection methods failed
+[2025-06-21 13:17:26] [INFO] Attempting to connect to 127.0.0.1:4370
+[2025-06-21 13:17:26] [INFO] Attempting connection via tcp_socket
+[2025-06-21 13:17:27] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:17:31] [ERROR] Connection attempt 2 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:17:35] [ERROR] Connection attempt 3 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:17:46] [INFO] Attempting to connect to 127.0.0.1:4370
+[2025-06-21 13:17:46] [INFO] Attempting connection via tcp_socket
+[2025-06-21 13:17:47] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:17:51] [ERROR] Connection attempt 2 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:17:55] [ERROR] Connection attempt 3 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:17:59] [ERROR] Connection attempt 4 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:18:03] [ERROR] Connection attempt 5 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:18:03] [INFO] Attempting connection via fsockopen
+[2025-06-21 13:18:04] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:18:08] [ERROR] Connection attempt 2 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:18:12] [ERROR] Connection attempt 3 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:18:16] [ERROR] Connection attempt 4 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:18:20] [ERROR] Connection attempt 5 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:18:20] [INFO] Attempting connection via stream_socket
+[2025-06-21 13:18:21] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:18:25] [ERROR] Connection attempt 2 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:18:29] [ERROR] Connection attempt 3 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:18:33] [ERROR] Connection attempt 4 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:18:37] [ERROR] Connection attempt 5 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:18:37] [ERROR] All connection methods failed
+[2025-06-21 13:18:37] [INFO] Attempting to connect to 127.0.0.1:8099
+[2025-06-21 13:18:37] [INFO] Attempting connection via tcp_socket
+[2025-06-21 13:18:38] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:18:42] [ERROR] Connection attempt 2 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:18:46] [ERROR] Connection attempt 3 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:18:50] [ERROR] Connection attempt 4 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:18:54] [ERROR] Connection attempt 5 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:18:54] [INFO] Attempting connection via fsockopen
+[2025-06-21 13:18:55] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:18:59] [ERROR] Connection attempt 2 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:19:03] [ERROR] Connection attempt 3 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:19:07] [ERROR] Connection attempt 4 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:19:11] [ERROR] Connection attempt 5 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:19:11] [INFO] Attempting connection via stream_socket
+[2025-06-21 13:19:12] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:19:16] [ERROR] Connection attempt 2 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:19:20] [ERROR] Connection attempt 3 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:19:24] [ERROR] Connection attempt 4 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:19:28] [ERROR] Connection attempt 5 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 13:19:28] [ERROR] All connection methods failed

@@ -36,7 +36,7 @@ foreach ($devices as $device) {
     }
     
     // The interface should be included to ensure driver compatibility
-    require_once __DIR__ . '/../app/core/drivers/DeviceDriverInterface.php';
+require_once '../app/core/drivers/DeviceDriverInterface.php';
     require_once $driver_file;
     
     if (!class_exists($driver_class)) {
