@@ -6,13 +6,13 @@ ini_set('display_errors', 1);
 set_time_limit(0);
 
 $host = '127.0.0.1';
-$port = 8099; // Port for Fingertec test device
+$port = 8099;
 
-echo "Fake FingerTec Server listening on tcp://{$host}:{$port}\n";
+echo "Fake FingerTec Server (Final) listening on tcp://{$host}:{$port}\n";
 
-// The user data payload. The final "OK" is critical.
 $users_response = "DATA\r\nPIN=10\tName=FT User One\tPri=0\r\nPIN=11\tName=FT Admin\tPri=14\r\nOK\r\n";
-$attendance_response = "DATA\r\nPIN=10\tDateTime=2025-06-21 08:59:00\tStatus=0\r\nPIN=11\tDateTime=2025-06-21 17:05:00\tStatus=1\r\nOK\r\n";
+// FIXED: Attendance logs now correspond to the two unique users.
+$attendance_response = "DATA\r\nPIN=10\tDateTime=2025-06-21 08:59:10\tStatus=0\r\nPIN=11\tDateTime=2025-06-21 18:01:05\tStatus=1\r\nOK\r\n";
 
 $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 socket_set_option($socket, SOL_SOCKET, SO_REUSEADDR, 1);
@@ -24,7 +24,7 @@ while($client = socket_accept($socket)) {
     
     $command = socket_read($client, 1024);
     echo "Received command: " . trim($command) . "\n";
-    $response = "OK\r\n"; // Default response
+    $response = "OK\r\n";
 
     if (strpos($command, 'DATA QUERY user') !== false) {
         $response = $users_response;

@@ -16,14 +16,11 @@ class FingertecDriver extends EnhancedBaseDriver {
     }
 
     protected function sendCommand(string $command, ?string $data = null, bool $expectResponse = true) {
-        if (!$this->isConnected()) throw new Exception("Not connected to FingerTec device.");
+        if (!$this->isConnected()) throw new Exception("Not connected.");
         
         $cmdString = $command . ($data !== null ? '=' . $data : '') . $this->config['line_ending'];
-
-        $this->logInfo("Sending command: {$command}");
-        if ($this->config['debug']) $this->logInfo("Raw command data: " . $cmdString);
-        
-        if (fwrite($this->connection, $cmdString) === false) throw new Exception("Failed to send command to device.");
+        if ($this->config['debug']) $this->logInfo("Sending: " . trim($cmdString));
+        if (fwrite($this->connection, $cmdString) === false) throw new Exception("Failed to send command.");
         
         return $expectResponse ? $this->readResponse() : true;
     }
@@ -31,7 +28,6 @@ class FingertecDriver extends EnhancedBaseDriver {
     protected function readResponse(): string {
         $response = '';
         $startTime = time();
-
         while (time() - $startTime < $this->config['timeout']) {
             if (feof($this->connection)) break;
             $chunk = fgets($this->connection, 2048);
@@ -39,10 +35,7 @@ class FingertecDriver extends EnhancedBaseDriver {
             $response .= $chunk;
             if (strpos($response, 'OK') !== false) break;
         }
-        
-        if (empty(trim($response))) $this->logError("Received empty or no response from device.");
-        if ($this->config['debug']) $this->logInfo("Raw response: " . $response);
-        
+        if ($this->config['debug']) $this->logInfo("Received: " . trim($response));
         return trim($response);
     }
     
@@ -61,9 +54,7 @@ class FingertecDriver extends EnhancedBaseDriver {
         foreach (explode("\r\n", $rawData) as $line) {
             $line = trim($line);
             if (empty($line) || strpos($line, 'DATA') === 0 || strpos($line, 'OK') === 0) continue;
-            
             parse_str(str_replace("\t", "&", $line), $userData);
-            
             if (!empty($userData['PIN'])) {
                 $users[] = [
                     'user_id' => trim($userData['PIN']),
@@ -76,7 +67,32 @@ class FingertecDriver extends EnhancedBaseDriver {
         return $users;
     }
 
-    public function getAttendanceLogs(): array { return []; }
+    public function getAttendanceLogs(): array {
+        try {
+            $response = $this->sendCommand('DATA QUERY attlog', 'PIN,DateTime,Status');
+            return $this->parseAttendanceData($response);
+        } catch (Exception $e) {
+            $this->logError("Failed to get attendance logs: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    private function parseAttendanceData(string $rawData): array {
+        $logs = [];
+        foreach (explode("\r\n", $rawData) as $line) {
+            $line = trim($line);
+            if (empty($line) || strpos($line, 'DATA') === 0 || strpos($line, 'OK') === 0) continue;
+            parse_str(str_replace("\t", "&", $line), $logData);
+            if (!empty($logData['PIN']) && !empty($logData['DateTime'])) {
+                $logs[] = [
+                    'employee_code' => trim($logData['PIN']),
+                    'punch_time'    => trim($logData['DateTime']),
+                ];
+            }
+        }
+        return $logs;
+    }
+
     public function addUser(string $userId, array $userData): bool { return false; }
     public function deleteUser(string $userId): bool { return false; }
     public function updateUser(string $userId, array $userData): bool { return false; }
