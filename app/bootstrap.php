@@ -15,6 +15,7 @@ define('APP_PATH', ROOT_PATH . '/app');
 // --- Include Core Files in the Correct Order ---
 // The order is important to ensure dependencies are met.
 require_once APP_PATH . '/core/config.php';
+require_once APP_PATH . '/core/error_handler.php'; // Include custom error handler
 require_once APP_PATH . '/core/database.php';
 require_once APP_PATH . '/core/helpers.php';
 require_once APP_PATH . '/core/auth.php';

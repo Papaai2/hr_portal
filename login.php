@@ -19,8 +19,8 @@ if (isset($_SESSION['user_id'])) {
 $error = '';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = trim($_POST['email']);
-    $password = $_POST['password'];
+    $email = sanitize_input($_POST['email'], 'email');
+    $password = $_POST['password']; // Password will be verified, not sanitized directly
 
     if (empty($email) || empty($password)) {
         $error = 'Please enter both email and password.';

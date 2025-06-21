@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'An admin account already exists. This script is disabled for security reasons.';
     } else {
         $full_name = sanitize_input($_POST['full_name']);
-        $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
+        $email = sanitize_input($_POST['email'], 'email');
         $password = $_POST['password'];
 
         if (empty($full_name) || empty($email) || empty($password)) {

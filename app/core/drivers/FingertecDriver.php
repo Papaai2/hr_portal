@@ -93,8 +93,59 @@ class FingertecDriver extends EnhancedBaseDriver {
         return $logs;
     }
 
-    public function addUser(string $userId, array $userData): bool { return false; }
-    public function deleteUser(string $userId): bool { return false; }
-    public function updateUser(string $userId, array $userData): bool { return false; }
-    public function clearAttendanceData(): bool { return false; }
+    public function addUser(string $userId, array $userData): bool {
+        $this->logInfo("Adding user {$userId} to FingerTec device...");
+        try {
+            $name = $userData['name'] ?? '';
+            $privilege = $userData['privilege'] ?? 0; // 0 for user, 1 for admin (FingerTec specific)
+            $password = $userData['password'] ?? ''; // Optional
+            $card_id = $userData['card_id'] ?? ''; // Optional
+
+            $data = "PIN={$userId}\tName={$name}\tPri={$privilege}";
+            if (!empty($password)) $data .= "\tPass={$password}";
+            if (!empty($card_id)) $data .= "\tCard={$card_id}";
+
+            $response = $this->sendCommand('DATA ADD user', $data);
+            return strpos($response, 'OK') !== false;
+        } catch (Exception $e) {
+            $this->logError("Failed to add user {$userId}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function deleteUser(string $userId): bool {
+        $this->logInfo("Deleting user {$userId} from FingerTec device...");
+        try {
+            $response = $this->sendCommand('DATA DELETE user', "PIN={$userId}");
+            return strpos($response, 'OK') !== false;
+        } catch (Exception $e) {
+            $this->logError("Failed to delete user {$userId}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function updateUser(string $userId, array $userData): bool {
+        $this->logInfo("Updating user {$userId} on FingerTec device...");
+        // FingerTec often handles updates as a re-add with the same PIN.
+        // We'll attempt to delete and then add, or just add if delete fails/isn't needed.
+        try {
+            // Attempt to delete first to ensure a clean update, though some devices allow direct update
+            $this->deleteUser($userId); // Ignore result, as add will overwrite
+            return $this->addUser($userId, $userData);
+        } catch (Exception $e) {
+            $this->logError("Failed to update user {$userId}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function clearAttendanceData(): bool {
+        $this->logInfo("Clearing attendance data from FingerTec device...");
+        try {
+            $response = $this->sendCommand('CLEAR LOG');
+            return strpos($response, 'OK') !== false;
+        } catch (Exception $e) {
+            $this->logError("Failed to clear attendance data: " . $e->getMessage());
+            return false;
+        }
+    }
 }

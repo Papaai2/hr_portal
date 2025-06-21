@@ -11,7 +11,10 @@ class ZKTecoDriver extends EnhancedBaseDriver {
     const CMD_EXIT = 1001;
     const CMD_ACK_OK = 2000;
     const CMD_PREPARE_DATA = 1500;
-    const CMD_ATTLOG_RRQ = 13;
+    const CMD_ATTLOG_RRQ = 13; // Request Attendance Logs
+    const CMD_USER_WRQ = 8; // Write User Record (Add/Update)
+    const CMD_CLEAR_ATTLOG = 1009; // Clear Attendance Logs
+    const CMD_DELETE_USER = 1004; // Delete User
     
     protected function getDefaultConfig(): array {
         return ['port' => 4370, 'timeout' => 10, 'debug' => false];
@@ -123,8 +126,72 @@ class ZKTecoDriver extends EnhancedBaseDriver {
         } catch (Exception $e) { /* Ignore exceptions on exit */ }
     }
 
-    public function addUser(string $userId, array $userData): bool { return false; }
-    public function deleteUser(string $userId): bool { return false; }
-    public function updateUser(string $userId, array $userData): bool { return false; }
-    public function clearAttendanceData(): bool { return false; }
+    public function addUser(string $userId, array $userData): bool {
+        $this->logInfo("Adding user {$userId}...");
+        try {
+            $privilege = $userData['privilege'] ?? 0; // 0 for user, 14 for admin
+            $name = substr($userData['name'] ?? '', 0, 24); // Max 24 chars
+            $password = substr($userData['password'] ?? '', 0, 8); // Max 8 chars
+            $card_id = $userData['card_id'] ?? 0; // Card number
+
+            // ZKTeco user data structure (simplified for common fields)
+            $user_data_payload = pack(
+                'vCa8a24a8c', // Format: PIN, Privilege, Password, Name, CardNo, Group
+                (int)$userId,
+                (int)$privilege,
+                str_pad($password, 8, "\0"),
+                str_pad($name, 24, "\0"),
+                str_pad((string)$card_id, 8, "\0"),
+                (int)($userData['group_id'] ?? 0)
+            );
+
+            $packet = BinaryHelper::createPacket(self::CMD_USER_WRQ, $this->sessionId, ++$this->replyId, $user_data_payload);
+            $response = $this->sendAndReceive($packet);
+
+            if (!$response) return false;
+            $header = BinaryHelper::parseHeader($response);
+            return $header && $header['command'] == self::CMD_ACK_OK;
+        } catch (Exception $e) {
+            $this->logError("Failed to add user {$userId}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function deleteUser(string $userId): bool {
+        $this->logInfo("Deleting user {$userId}...");
+        try {
+            $user_id_payload = pack('V', (int)$userId); // User ID as unsigned long
+            $packet = BinaryHelper::createPacket(self::CMD_DELETE_USER, $this->sessionId, ++$this->replyId, $user_id_payload);
+            $response = $this->sendAndReceive($packet);
+
+            if (!$response) return false;
+            $header = BinaryHelper::parseHeader($response);
+            return $header && $header['command'] == self::CMD_ACK_OK;
+        } catch (Exception $e) {
+            $this->logError("Failed to delete user {$userId}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function updateUser(string $userId, array $userData): bool {
+        // For ZKTeco, update is often a re-add with the same user ID.
+        // This assumes the device supports overwriting user data.
+        $this->logInfo("Updating user {$userId}...");
+        return $this->addUser($userId, $userData);
+    }
+
+    public function clearAttendanceData(): bool {
+        $this->logInfo("Clearing attendance data...");
+        try {
+            $packet = BinaryHelper::createPacket(self::CMD_CLEAR_ATTLOG, $this->sessionId, ++$this->replyId);
+            $response = $this->sendAndReceive($packet);
+
+            if (!$response) return false;
+            $header = BinaryHelper::parseHeader($response);
+            return $header && $header['command'] == self::CMD_ACK_OK;
+        } catch (Exception $e) {
+            $this->logError("Failed to clear attendance data: " . $e->getMessage());
+            return false;
+        }
+    }
 }

@@ -7,10 +7,16 @@
  * @param string $data The raw input data.
  * @return string The sanitized data.
  */
-function sanitize_input($data) {
+function sanitize_input($data, $type = 'string') {
     $data = trim($data);
     $data = stripslashes($data);
     $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+
+    if ($type === 'email') {
+        $data = filter_var($data, FILTER_SANITIZE_EMAIL);
+    }
+    // Add more types as needed, e.g., 'int', 'float', 'url'
+
     return $data;
 }
 

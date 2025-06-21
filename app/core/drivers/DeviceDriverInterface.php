@@ -53,5 +53,10 @@ if (!interface_exists('DeviceDriverInterface')) {
          * Clears all attendance data from the device.
          */
         public function clearAttendanceData(): bool;
+
+        /**
+         * Retrieves the device name.
+         */
+        public function getDeviceName(): string;
     }
 }

@@ -43,7 +43,7 @@ if (!$device) {
 }
 
 $error_message = '';
-$success_message = '';
+$success_message = $_GET['success'] ?? ''; // For redirect messages
 $device_users = [];
 $is_online = false;
 $driver = get_driver($device['device_brand']);
@@ -87,8 +87,9 @@ include __DIR__ . '/../app/templates/header.php';
 </div>
 
 <?php if ($error_message): ?><div class="alert alert-danger"><?= htmlspecialchars($error_message) ?></div><?php endif; ?>
+<?php if ($success_message): ?><div class="alert alert-success"><?= htmlspecialchars($success_message) ?></div><?php endif; ?>
 
-<div class="card shadow-sm">
+<div class="card shadow-sm mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h2 class="h5 mb-0">Users on Device</h2>
         <?php if ($is_online && empty($error_message)): ?>
@@ -99,23 +100,25 @@ include __DIR__ . '/../app/templates/header.php';
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-striped table-hover">
+            <table class="table table-striped table-hover align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Device User ID</th>
+                        <th>User ID</th>
                         <th>Name</th>
+                        <th>Privilege</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (!empty($error_message) && empty($device_users)): ?>
-                        <tr><td colspan="2" class="text-center p-4">Could not retrieve users. Please check the error message above.</td></tr>
+                        <tr><td colspan="3" class="text-center p-4">Could not retrieve users. Please check the error message above.</td></tr>
                     <?php elseif (empty($device_users)): ?>
-                        <tr><td colspan="2" class="text-center p-4">No users found on this device or the device is offline.</td></tr>
+                        <tr><td colspan="3" class="text-center p-4">No users found on this device or the device is offline.</td></tr>
                     <?php else: ?>
                         <?php foreach ($device_users as $user): ?>
                             <tr>
                                 <td><strong><?= htmlspecialchars($user['user_id'] ?? 'N/A') ?></strong></td>
                                 <td><?= htmlspecialchars($user['name'] ?? 'N/A') ?></td>
+                                <td><?= htmlspecialchars($user['privilege'] ?? 'N/A') ?></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
