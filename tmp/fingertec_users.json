@@ -1,0 +1,14 @@
+{
+    "101": {
+        "pin": "0065",
+        "privilege": 14,
+        "name": "Fingertec Admin (Default)",
+        "password": "123"
+    },
+    "102": {
+        "pin": "0066",
+        "privilege": 0,
+        "name": "Fingertec User (Default)",
+        "password": ""
+    }
+}

@@ -1,6 +1,6 @@
 <?php
 // in file: app/core/drivers/FingertecDriver.php
-// FINAL VERSION with Implemented User Management
+// FINAL REVERTED VERSION
 
 require_once __DIR__ . '/DeviceDriverInterface.php';
 require_once __DIR__ . '/lib/fingertec/TAD_PHP_Library.php';
@@ -25,40 +25,19 @@ class FingertecDriver implements DeviceDriverInterface
             $this->is_connected = false;
         }
     }
-
-    public function isConnected(): bool
-    {
-        return $this->is_connected;
-    }
     
     public function getDeviceName(): string
     {
-         return $this->isConnected() ? 'Fingertec Device' : 'N/A';
+         return $this->is_connected ? 'Fingertec Device' : 'N/A';
     }
 
     public function getUsers(): array
     {
-        return $this->isConnected() ? $this->tad->getUsers() : [];
+        return $this->is_connected ? $this->tad->getUsers() : [];
     }
 
     public function getAttendanceLogs(): array
     {
-        return $this->isConnected() ? [] : [];
-    }
-
-    public function addUser(array $userData): bool
-    {
-        // For a simulation, we confirm the action could be sent.
-        return $this->isConnected();
-    }
-
-    public function updateUser(string $employee_code, array $userData): bool
-    {
-        return $this->isConnected();
-    }
-
-    public function deleteUser(string $employee_code): bool
-    {
-        return $this->isConnected();
+        return $this->is_connected ? [] : [];
     }
 }

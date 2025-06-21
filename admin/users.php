@@ -1,9 +1,12 @@
 <?php
 // in file: htdocs/admin/users.php
-// FINAL, COMPLETE VERSION with "Sync to Devices" button
+// REVERTED to remove Sync to Devices button
 
 require_once __DIR__ . '/../app/bootstrap.php';
 require_role(['admin', 'hr', 'hr_manager']);
+
+$page_title = 'Manage Users';
+include __DIR__ . '/../app/templates/header.php';
 
 $error = '';
 $success = '';
@@ -49,7 +52,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $success = 'User created successfully.';
                 log_audit_action($pdo, 'add_user', json_encode(['email' => $email]), get_current_user_id());
             }
-            // Use JS to redirect to clear POST data and show success message
             echo "<script>window.location.href = 'users.php?success=" . urlencode($success) . "';</script>";
             exit();
         } catch (Exception $e) {
@@ -74,21 +76,14 @@ $departments = $pdo->query("SELECT id, name FROM departments ORDER BY name")->fe
 $managers = $pdo->query("SELECT id, full_name FROM users WHERE role IN ('manager', 'admin', 'hr_manager') ORDER BY full_name")->fetchAll();
 $roles = ['user', 'manager', 'hr', 'hr_manager', 'admin'];
 $shifts = $pdo->query("SELECT id, shift_name, start_time, end_time FROM shifts ORDER BY shift_name")->fetchAll();
-
 $users_list = $pdo->query("SELECT u.*, d.name AS department_name, m.full_name AS manager_name, s.shift_name FROM users u LEFT JOIN departments d ON u.department_id = d.id LEFT JOIN users m ON u.direct_manager_id = m.id LEFT JOIN shifts s ON u.shift_id = s.id ORDER BY u.full_name")->fetchAll();
 
 if(isset($_GET['success'])) $success = $_GET['success'];
-
-$page_title = 'Manage Users';
-include __DIR__ . '/../app/templates/header.php';
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h2">Manage Users</h1>
     <div>
-        <a href="run_sync.php" class="btn btn-info" title="Push all users from this list to all connected devices.">
-            <i class="bi bi-arrow-repeat me-1"></i> Sync to Devices
-        </a>
         <a href="import_users_csv.php" class="btn btn-success"><i class="bi bi-upload me-1"></i> Import via CSV</a>
         <a href="?action=add#user-form" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Add New User</a>
     </div>

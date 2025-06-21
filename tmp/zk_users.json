@@ -1,0 +1,16 @@
+{
+    "1": {
+        "pin": 1,
+        "privilege": 14,
+        "name": "ZK Admin (Default)",
+        "password": "123",
+        "card_number": ""
+    },
+    "2": {
+        "pin": 2,
+        "privilege": 0,
+        "name": "ZK User (Default)",
+        "password": "",
+        "card_number": ""
+    }
+}
