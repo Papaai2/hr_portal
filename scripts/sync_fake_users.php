@@ -22,9 +22,10 @@ if (empty($devices)) {
 }
 
 $find_user_stmt = $pdo->prepare("SELECT id FROM users WHERE employee_code = ?");
+// FIXED: Removed the non-existent 'username' column from the INSERT statement.
 $insert_user_stmt = $pdo->prepare(
-    "INSERT INTO users (employee_code, username, full_name, password, email, role, shift_id) 
-     VALUES (?, ?, ?, ?, ?, 'employee', 1)" // Assuming default shift_id=1
+    "INSERT INTO users (employee_code, full_name, password, email, role, shift_id) 
+     VALUES (?, ?, ?, ?, 'employee', 1)" // Assuming default shift_id=1
 );
 
 $total_synced = 0;
@@ -55,13 +56,14 @@ foreach ($devices as $device) {
             if ($find_user_stmt->fetch()) {
                 echo "  - User {$employee_code} ('{$user['name']}') already exists in database. Skipping.\n";
             } else {
-                $username = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $user['name'])) . $employee_code;
                 $password = password_hash(bin2hex(random_bytes(8)), PASSWORD_DEFAULT);
-                $email = "{$username}@example.com";
+                // Generate a unique email based on name and employee code
+                $email_user_part = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $user['name']));
+                $email = "{$email_user_part}{$employee_code}@example.com";
 
+                // FIXED: The execute call now matches the corrected INSERT statement.
                 $insert_user_stmt->execute([
                     $employee_code,
-                    $username,
                     $user['name'],
                     $password,
                     $email
