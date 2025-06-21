@@ -83,3 +83,86 @@
 [2025-06-21 13:19:24] [ERROR] Connection attempt 4 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
 [2025-06-21 13:19:28] [ERROR] Connection attempt 5 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
 [2025-06-21 13:19:28] [ERROR] All connection methods failed
+[2025-06-21 14:15:04] [INFO] Attempting to connect to 127.0.0.1:4370
+[2025-06-21 14:15:04] [INFO] Connecting to fake device at 127.0.0.1:4370
+[2025-06-21 14:15:04] [INFO] Successfully connected to fake device
+[2025-06-21 14:15:04] [INFO] Disconnected from device
+[2025-06-21 14:15:04] [INFO] Attempting to connect to 127.0.0.1:8099
+[2025-06-21 14:15:04] [INFO] Connecting to fake device at 127.0.0.1:8099
+[2025-06-21 14:15:04] [INFO] Successfully connected to fake device
+[2025-06-21 14:15:04] [INFO] Disconnected from device
+[2025-06-21 14:15:07] [INFO] Attempting to connect to 127.0.0.1:4370
+[2025-06-21 14:15:07] [INFO] Connecting to fake device at 127.0.0.1:4370
+[2025-06-21 14:15:07] [INFO] Successfully connected to fake device
+[2025-06-21 14:15:07] [INFO] Handling fake ZKTeco command: 1502
+[2025-06-21 14:15:07] [INFO] Disconnected from device
+[2025-06-21 14:15:08] [INFO] Attempting to connect to 127.0.0.1:4370
+[2025-06-21 14:15:08] [INFO] Connecting to fake device at 127.0.0.1:4370
+[2025-06-21 14:15:08] [INFO] Successfully connected to fake device
+[2025-06-21 14:15:08] [INFO] Disconnected from device
+[2025-06-21 14:15:08] [INFO] Attempting to connect to 127.0.0.1:8099
+[2025-06-21 14:15:08] [INFO] Connecting to fake device at 127.0.0.1:8099
+[2025-06-21 14:15:08] [INFO] Successfully connected to fake device
+[2025-06-21 14:15:08] [INFO] Disconnected from device
+[2025-06-21 14:15:09] [INFO] Attempting to connect to 127.0.0.1:8099
+[2025-06-21 14:15:09] [INFO] Connecting to fake device at 127.0.0.1:8099
+[2025-06-21 14:15:09] [INFO] Successfully connected to fake device
+[2025-06-21 14:15:09] [INFO] Handling fake command: DATA QUERY userinfo
+[2025-06-21 14:15:09] [INFO] Disconnected from device
+[2025-06-21 14:15:10] [INFO] Attempting to connect to 127.0.0.1:4370
+[2025-06-21 14:15:10] [INFO] Connecting to fake device at 127.0.0.1:4370
+[2025-06-21 14:15:10] [INFO] Successfully connected to fake device
+[2025-06-21 14:15:10] [INFO] Disconnected from device
+[2025-06-21 14:15:10] [INFO] Attempting to connect to 127.0.0.1:8099
+[2025-06-21 14:15:10] [INFO] Connecting to fake device at 127.0.0.1:8099
+[2025-06-21 14:15:10] [INFO] Successfully connected to fake device
+[2025-06-21 14:15:10] [INFO] Disconnected from device
+[2025-06-21 14:15:28] [INFO] Attempting to connect to 127.0.0.1:4370
+[2025-06-21 14:15:28] [INFO] Connecting to fake device at 127.0.0.1:4370
+[2025-06-21 14:15:28] [INFO] Successfully connected to fake device
+[2025-06-21 14:15:28] [INFO] Disconnected from device
+[2025-06-21 14:15:28] [INFO] Attempting to connect to 127.0.0.1:8099
+[2025-06-21 14:15:28] [INFO] Connecting to fake device at 127.0.0.1:8099
+[2025-06-21 14:15:28] [INFO] Successfully connected to fake device
+[2025-06-21 14:15:28] [INFO] Disconnected from device
+[2025-06-21 14:15:51] [INFO] Attempting to connect to 127.0.0.1:8100
+[2025-06-21 14:15:51] [INFO] Connecting to fake device at 127.0.0.1:8100
+[2025-06-21 14:15:51] [INFO] Successfully connected to fake device
+[2025-06-21 14:15:51] [INFO] Disconnected from device
+[2025-06-21 14:15:51] [INFO] Attempting to connect to 127.0.0.1:8099
+[2025-06-21 14:15:51] [INFO] Connecting to fake device at 127.0.0.1:8099
+[2025-06-21 14:15:51] [INFO] Successfully connected to fake device
+[2025-06-21 14:15:51] [INFO] Disconnected from device
+[2025-06-21 14:16:02] [INFO] Attempting to connect to 127.0.0.1:8100
+[2025-06-21 14:16:02] [INFO] Connecting to fake device at 127.0.0.1:8100
+[2025-06-21 14:16:02] [INFO] Successfully connected to fake device
+[2025-06-21 14:16:02] [INFO] Disconnected from device
+[2025-06-21 14:16:02] [INFO] Attempting to connect to 127.0.0.1:8099
+[2025-06-21 14:16:02] [INFO] Connecting to fake device at 127.0.0.1:8099
+[2025-06-21 14:16:02] [INFO] Successfully connected to fake device
+[2025-06-21 14:16:02] [INFO] Disconnected from device
+[2025-06-21 15:36:11] [INFO] Attempting to connect to 127.0.0.1:8100
+[2025-06-21 15:36:11] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:36:12] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:36:16] [ERROR] Connection attempt 2 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:36:20] [ERROR] Connection attempt 3 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:36:24] [ERROR] Connection attempt 4 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:36:28] [ERROR] Connection attempt 5 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:36:28] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:36:29] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:36:33] [ERROR] Connection attempt 2 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:36:39] [INFO] Attempting to connect to 127.0.0.1:8100
+[2025-06-21 15:36:39] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:36:40] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:36:44] [ERROR] Connection attempt 2 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:36:48] [ERROR] Connection attempt 3 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:36:52] [ERROR] Connection attempt 4 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:36:56] [ERROR] Connection attempt 5 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:36:56] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:36:57] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:37:01] [ERROR] Connection attempt 2 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:37:05] [ERROR] Connection attempt 3 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:37:09] [ERROR] Connection attempt 4 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:37:13] [ERROR] Connection attempt 5 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:37:13] [INFO] Attempting connection via stream_socket
+[2025-06-21 15:37:14] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)

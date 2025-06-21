@@ -2,8 +2,7 @@
 /**
  * Enhanced FingerTec Driver for Windows
  * File: app/core/drivers/FingertecDriver.php (replaces original)
- * 
- * Compatibility improvements:
+ * * Compatibility improvements:
  * - Support for all FingerTec models (TA100, TA200, TA300, R2, R3, etc.)
  * - Enhanced ASCII protocol handling with Windows compatibility
  * - Advanced error recovery and device-specific optimizations
@@ -387,7 +386,7 @@ class FingertecDriver extends EnhancedBaseDriver {
         }
     }
     
-    public function addUser($userId, $userData) {
+    public function addUser(string $userId, array $userData): bool {
         try {
             $userString = implode("\t", [
                 $userId,
@@ -407,11 +406,11 @@ class FingertecDriver extends EnhancedBaseDriver {
         }
     }
     
-    public function updateUser($userId, $userData) {
+    public function updateUser(string $userId, array $userData): bool {
         return $this->addUser($userId, $userData);
     }
     
-    public function deleteUser($userId) {
+    public function deleteUser(string $userId): bool {
         try {
             return $this->sendCommand('DATA DELETE userinfo', "WHERE userid={$userId}");
         } catch (Exception $e) {
@@ -460,7 +459,7 @@ class FingertecDriver extends EnhancedBaseDriver {
         return $attendanceRecords;
     }
     
-    public function clearAttendanceData() {
+    public function clearAttendanceData(): bool {
         try {
             return $this->sendCommand($this->commands['CLEAR_ATTENDANCE']);
         } catch (Exception $e) {
@@ -579,4 +578,3 @@ class FingertecDriver extends EnhancedBaseDriver {
         }
     }
 }
-?>

@@ -14,7 +14,6 @@ $success_message = $_GET['success'] ?? '';
 
 // --- Form Processing at the Top ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // This block handles both add and update actions
     $device_id = filter_input(INPUT_POST, 'device_id', FILTER_VALIDATE_INT);
     $name = trim($_POST['name'] ?? '');
     $ip_address = trim($_POST['ip_address'] ?? '');
@@ -23,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($name) || empty($ip_address) || empty($port) || empty($device_brand)) {
         $error_message = 'All fields are required.';
-    } elseif (!filter_var($ip_address, FILTER_VALIDATE_IP)) {
+    } elseif (filter_var($ip_address, FILTER_VALIDATE_IP) === false && $ip_address !== 'localhost') {
         $error_message = 'The provided IP address is not valid.';
     } else {
         try {
@@ -47,12 +46,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // --- Data Fetching ---
 $devices = $pdo->query("SELECT * FROM devices ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
 
-function get_driver(?string $brand): ?DeviceDriverInterface {
+function get_driver(?string $brand): ?EnhancedBaseDriver {
     if (!$brand) return null;
-    $brand = strtolower($brand);
+    $brand_lower = strtolower($brand);
     try {
-        if ($brand === 'fingertec') return new FingertecDriver();
-        if ($brand === 'zkteco') return new ZKTecoDriver();
+        if ($brand_lower === 'fingertec') return new FingertecDriver();
+        if ($brand_lower === 'zkteco') return new ZKTecoDriver();
     } catch (Exception $e) {
         error_log("Failed to create driver for brand {$brand}: " . $e->getMessage());
     }
@@ -116,7 +115,7 @@ include __DIR__ . '/../app/templates/header.php';
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-end">
-                                    <a href="device_users.php?id=<?= $device['id'] ?>" class="btn btn-info btn-sm" title="Manage Users"><i class="bi bi-people-fill"></i> Users</a>
+                                    <a href="device_users.php?id=<?= $device['id'] ?>" class="btn btn-primary btn-sm" title="Manage Users"><i class="bi bi-people-fill"></i> Users</a>
                                     <button class="btn btn-warning btn-sm edit-device-btn"
                                             data-bs-toggle="modal" data-bs-target="#deviceModal"
                                             data-id="<?= $device['id'] ?>"
@@ -160,6 +159,7 @@ include __DIR__ . '/../app/templates/header.php';
                     <div class="mb-3">
                         <label for="form_device_brand" class="form-label">Device Brand</label>
                         <select class="form-select" id="form_device_brand" name="device_brand" required>
+                            <option value="">-- Select Brand --</option>
                             <option value="ZKTeco">ZKTeco</option>
                             <option value="Fingertec">Fingertec</option>
                         </select>
@@ -177,6 +177,8 @@ include __DIR__ . '/../app/templates/header.php';
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const deviceModal = document.getElementById('deviceModal');
+    if (!deviceModal) return;
+
     const modalTitle = document.getElementById('deviceModalLabel');
     const deviceForm = document.getElementById('deviceForm');
     const deviceIdInput = document.getElementById('form_device_id');
