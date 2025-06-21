@@ -45,11 +45,9 @@ try {
 
     echo json_encode([
         'success' => true,
-        'stats' => [
-            'pendingRequests' => $pending_requests,
-            'approvedThisMonth' => $approved_this_month,
-            'teamSize' => $team_size
-        ]
+        'pending_requests' => $pending_requests,
+        'approved_this_month' => $approved_this_month,
+        'team_members' => $team_size
     ]);
 
 } catch (PDOException $e) {

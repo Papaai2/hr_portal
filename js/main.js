@@ -93,20 +93,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     const teamMembersElement = statCards[2].querySelector('.stat-number');
 
                     if (pendingRequestsElement) {
-                        pendingRequestsElement.textContent = stats.pending_requests;
-                        console.log("Updated Pending Requests:", stats.pending_requests);
+                        pendingRequestsElement.textContent = stats.stats.pendingRequests;
+                        console.log("Updated Pending Requests:", stats.stats.pendingRequests);
                     } else {
                         console.warn("Pending Requests .stat-number element not found.");
                     }
                     if (approvedThisMonthElement) {
-                        approvedThisMonthElement.textContent = stats.approved_this_month;
-                        console.log("Updated Approved This Month:", stats.approved_this_month);
+                        approvedThisMonthElement.textContent = stats.stats.approvedThisMonth;
+                        console.log("Updated Approved This Month:", stats.stats.approvedThisMonth);
                     } else {
                         console.warn("Approved This Month .stat-number element not found.");
                     }
                     if (teamMembersElement) {
-                        teamMembersElement.textContent = stats.team_members;
-                        console.log("Updated Team Members:", stats.team_members);
+                        teamMembersElement.textContent = stats.stats.teamSize;
+                        console.log("Updated Team Members:", stats.stats.teamSize);
                     } else {
                         console.warn("Team Members .stat-number element not found.");
                     }

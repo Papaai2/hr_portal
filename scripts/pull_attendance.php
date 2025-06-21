@@ -61,7 +61,6 @@ foreach ($devices as $device) {
         continue;
     }
     
-    // This line was causing the error, it is now fixed because getDeviceName() exists.
     echo "[SUCCESS] Connected to device: " . $driver->getDeviceName() . "\n";
     
     try {
