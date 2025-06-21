@@ -1,6 +1,6 @@
 <?php
 // in file: app/core/services/AttendanceService.php
-require_once __DIR__ . '/../drivers/EnhancedDriverFramework.php';
+
 class AttendanceService
 {
     private PDO $pdo;

@@ -1,0 +1,5 @@
+{
+    "model": "TA200",
+    "max_users": 2000,
+    "timeout": 30
+}
