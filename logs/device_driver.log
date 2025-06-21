@@ -20,3 +20,17 @@
 [2025-06-21 15:43:34] [INFO] Attempting connection via tcp_socket
 [2025-06-21 15:43:34] [INFO] Connected successfully via tcp_socket on attempt 1
 [2025-06-21 15:43:34] [INFO] Sending ZKTeco command: 1000
+[2025-06-21 15:44:34] [ERROR] ZKTeco command send attempt 1 failed: Error reading response header
+[2025-06-21 15:44:37] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 30s and 5 attempts.
+[2025-06-21 15:44:37] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:44:37] [INFO] Connected successfully via tcp_socket on attempt 1
+[2025-06-21 15:44:37] [INFO] Sending ZKTeco command: 1000
+[2025-06-21 15:45:37] [ERROR] ZKTeco command send attempt 1 failed: Error reading response header
+[2025-06-21 15:46:45] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 30s and 5 attempts.
+[2025-06-21 15:46:45] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:46:45] [INFO] Connected successfully via tcp_socket on attempt 1
+[2025-06-21 15:46:45] [INFO] Sending ZKTeco command: 1000
+[2025-06-21 15:46:53] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 30s and 5 attempts.
+[2025-06-21 15:46:53] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:46:53] [INFO] Connected successfully via tcp_socket on attempt 1
+[2025-06-21 15:46:53] [INFO] Sending ZKTeco command: 1000
