@@ -1,100 +1,98 @@
 <?php
 // in file: app/core/drivers/lib/BinaryHelper.php
+// FINAL, STABLE, AND SYMMETRICAL VERSION
 
 class BinaryHelper
 {
     /**
-     * Creates a ZKTeco protocol header.
-     *
-     * @param integer $command The command code.
-     * @param integer $sessionId The session ID from the device.
-     * @param integer $replyId The reply counter.
-     * @param string $data The payload data.
-     * @return string The full packet with header and data.
+     * Creates a full ZKTeco protocol packet including the header and data.
      */
     public static function createHeader(int $command, int $sessionId, int $replyId, string $data = ''): string
     {
-        $command_len = strlen($data) + 8;
-        
-        // The header part that is used for checksum calculation
-        $buf = pack('vvvv', $command_len, $sessionId, $replyId, $command);
-        $checksum = self::calculateChecksum($buf . $data);
-        
-        // The final packet with the checksum included
-        $header = pack('H*', '5050') . pack('v', $command_len) . pack('v', $checksum) . pack('v', $sessionId) . pack('v', $replyId) . pack('v', $command);
-        
-        return $header . $data;
+        // The core packet data used for checksum calculation
+        $buf = pack('vvvv', $command, $sessionId, $replyId, strlen($data)) . $data;
+        $checksum = self::calculateChecksum($buf);
+
+        // The final packet with the fixed start marker and calculated checksum
+        $header = pack('vvvv', 1, $checksum, $sessionId, $replyId);
+
+        return "\x50\x50\x82\x7d" . $header . $buf;
     }
 
     /**
-     * Parses the header from a ZKTeco response packet.
-     *
-     * @param string $data The raw response data.
-     * @return array|null The parsed header or null on failure.
+     * Parses the header from a ZKTeco request/response packet.
+     * This is now robust and correctly matches the createHeader structure.
      */
     public static function parseHeader(string $data): ?array
     {
-        if (strlen($data) < 8) return null;
-        return unpack('vcommand/vchecksum/vsession_id/vreply_id', substr($data, 8, 8));
+        if (strlen($data) < 16) {
+            return null; // Not enough data for a full header
+        }
+        
+        // Unpack the fixed header part of the ZK protocol
+        $header_format = 'vstart_marker/vunknown/vsize/vchecksum/vsession_id/vreply_id/vcommand';
+        $header = unpack($header_format, substr($data, 0, 14));
+
+        return $header !== false ? $header : null;
     }
     
     /**
      * Calculates the ZKTeco checksum for a given data buffer.
-     * NOTE: This is a known algorithm for these devices.
-     *
-     * @param string $data The data to checksum.
-     * @return integer The calculated checksum.
      */
     private static function calculateChecksum(string $data): int
     {
         $checksum = 0;
         $len = strlen($data);
         for ($i = 0; $i < $len; $i = $i + 2) {
-            $val = ord($data[$i]) + (isset($data[$i + 1]) ? ord($data[$i + 1]) * 256 : 0);
-            $checksum += $val;
-            if ($checksum > 65535) {
-                $checksum -= 65536;
-            }
+            $value = ord($data[$i]) + (isset($data[$i + 1]) ? ord($data[$i + 1]) << 8 : 0);
+            $checksum += $value;
         }
-        return ($checksum ^ 0xFFFF) + 1;
+        return ($checksum % 65536);
     }
     
     /**
      * Parses the user data payload from a ZKTeco device.
-     *
-     * @param string $data The raw user data payload.
-     * @return array An array of parsed users.
      */
     public static function parseZkUserData(string $data): array
     {
         if (empty($data)) return [];
         $users = [];
-        // The first 4 bytes are a header for the data chunk.
-        if (strlen($data) > 4) {
+        
+        // This check is important as real device payloads have this prefix.
+        if (strpos($data, "\x01\x00\x00\x00") === 0) {
             $data = substr($data, 4);
         }
 
-        $record_size = 72; // Each user record is typically 72 bytes
+        $record_size = 72;
+        
         while (strlen($data) >= $record_size) {
             $record = substr($data, 0, $record_size);
-            // Unpack the relevant fields from the user record
-            $userdata = unpack('vpin/cprivilege/a8password/a24name/a9cardno/cgroup/a24timezones/a8pin2', $record);
+            
+            $unpack_format = 'vpin/cprivilege/a8password/a24name/a8cardno/cgroup/a24timezones/a4pin2';
+            $userdata = unpack($unpack_format, $record);
+
+            if ($userdata === false) {
+                error_log("BinaryHelper: unpack() failed for a user record. Skipping.");
+                $data = substr($data, $record_size);
+                continue;
+            }
             
             $employee_code = $userdata['pin'];
-            // Clean the name field from null bytes and other non-printable characters
-            $name = trim(preg_replace('/[\x00-\x1F\x7F]/', '', $userdata['name']));
+            $raw_name = $userdata['name'] ?? '';
+            $name = trim(preg_replace('/[\x00-\x1F\x7F]/', '', $raw_name));
             
             if ($employee_code > 0 && !empty($name)) {
                 $users[] = [
                     'employee_code' => $employee_code,
-                    'user_id' => $employee_code, // for consistency
+                    'user_id' => $employee_code,
                     'name' => $name,
-                    'role' => ($userdata['privilege'] == 14) ? 'Admin' : 'User', // 14 is a common admin level
+                    'role' => ($userdata['privilege'] == 14) ? 'Admin' : 'User',
                     'privilege' => ($userdata['privilege'] == 14) ? 'Admin' : 'User',
-                    'card_id' => intval(trim($userdata['cardno'])),
+                    'card_id' => intval(trim($userdata['cardno'] ?? '')),
                     'group_id' => $userdata['group'],
                 ];
             }
+            
             $data = substr($data, $record_size);
         }
         return $users;
