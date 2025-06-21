@@ -43,3 +43,40 @@
 [2025-06-21 15:49:59] [INFO] Attempting connection via tcp_socket
 [2025-06-21 15:49:59] [INFO] Connected successfully via tcp_socket on attempt 1
 [2025-06-21 15:49:59] [INFO] Sending command: DATA QUERY userinfo
+[2025-06-21 15:50:59] [ERROR] Command send attempt 1 failed: Error reading response from device
+[2025-06-21 15:50:59] [ERROR] Failed to get users: Error reading response from device
+[2025-06-21 15:50:59] [INFO] Disconnected from device 127.0.0.1
+[2025-06-21 15:50:59] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 15s and 1 attempts.
+[2025-06-21 15:50:59] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:50:59] [INFO] Connected successfully via tcp_socket on attempt 1
+[2025-06-21 15:50:59] [INFO] Sending ZKTeco command: 1000
+[2025-06-21 15:51:34] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 15s and 1 attempts.
+[2025-06-21 15:51:34] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:51:34] [INFO] Connected successfully via tcp_socket on attempt 1
+[2025-06-21 15:51:34] [INFO] Sending ZKTeco command: 1000
+[2025-06-21 15:51:57] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 15s and 1 attempts.
+[2025-06-21 15:51:57] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:51:57] [INFO] Connected successfully via tcp_socket on attempt 1
+[2025-06-21 15:51:57] [INFO] Sending ZKTeco command: 1000
+[2025-06-21 15:52:57] [ERROR] ZKTeco command send attempt 1 failed: Error reading response header
+[2025-06-21 15:52:57] [ERROR] ZKTeco handshake failed: Error reading response header
+[2025-06-21 15:52:57] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:52:57] [INFO] Connected successfully via fsockopen on attempt 1
+[2025-06-21 15:52:57] [INFO] Sending ZKTeco command: 1000
+[2025-06-21 15:53:00] [INFO] Attempting to connect to 127.0.0.1:8099 with timeout 15s and 1 attempts.
+[2025-06-21 15:53:00] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:53:00] [INFO] Connected successfully via tcp_socket on attempt 1
+[2025-06-21 15:53:00] [INFO] Sending command: DATA QUERY userinfo
+[2025-06-21 15:53:09] [INFO] Attempting to connect to 127.0.0.1:8099 with timeout 15s and 1 attempts.
+[2025-06-21 15:53:09] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:53:09] [INFO] Connected successfully via tcp_socket on attempt 1
+[2025-06-21 15:53:09] [INFO] Sending command: DATA QUERY userinfo
+[2025-06-21 15:54:04] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 15s and 1 attempts.
+[2025-06-21 15:54:04] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:54:04] [INFO] Connected successfully via tcp_socket on attempt 1
+[2025-06-21 15:54:04] [INFO] Sending ZKTeco command: 1000
+[2025-06-21 15:55:04] [ERROR] ZKTeco command send attempt 1 failed: Error reading response header
+[2025-06-21 15:55:04] [ERROR] ZKTeco handshake failed: Error reading response header
+[2025-06-21 15:55:04] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:55:04] [INFO] Connected successfully via fsockopen on attempt 1
+[2025-06-21 15:55:04] [INFO] Sending ZKTeco command: 1000
