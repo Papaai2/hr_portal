@@ -1,4 +1,3 @@
-
 <?php
 require_once __DIR__ . '/../app/bootstrap.php';
 require_role(['admin', 'hr_manager']);
@@ -6,69 +5,8 @@ require_role(['admin', 'hr_manager']);
 $error_message = '';
 $success_message = $_GET['success'] ?? '';
 
-// Handle POST requests for adding, editing, deleting logs
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
-    $log_id = filter_input(INPUT_POST, 'log_id', FILTER_VALIDATE_INT);
-    $employee_code = sanitize_input($_POST['employee_code'] ?? '');
-    $punch_time = sanitize_input($_POST['punch_time'] ?? '');
-    $punch_state = filter_input(INPUT_POST, 'punch_state', FILTER_VALIDATE_INT);
-    $status = sanitize_input($_POST['status'] ?? '');
-    $shift_id = filter_input(INPUT_POST, 'shift_id', FILTER_VALIDATE_INT);
-
-    try {
-        switch ($action) {
-            case 'add_log':
-                if (empty($employee_code) || empty($punch_time) || !isset($punch_state) || empty($status)) {
-                    $error_message = "All fields are required to add an attendance log.";
-                } else {
-                    $stmt = $pdo->prepare("INSERT INTO attendance_logs (employee_code, punch_time, punch_state, status, shift_id) VALUES (?, ?, ?, ?, ?)");
-                    if ($stmt->execute([$employee_code, $punch_time, $punch_state, $status, $shift_id])) {
-                        $success_message = "Attendance log added successfully.";
-                        log_audit_action($pdo, 'add_attendance_log', "Added log for {$employee_code} at {$punch_time}");
-                    } else {
-                        $error_message = "Failed to add attendance log.";
-                    }
-                }
-                break;
-            case 'edit_log':
-                if (empty($log_id) || empty($employee_code) || empty($punch_time) || !isset($punch_state) || empty($status)) {
-                    $error_message = "All fields are required to edit an attendance log.";
-                } else {
-                    $stmt = $pdo->prepare("UPDATE attendance_logs SET employee_code = ?, punch_time = ?, punch_state = ?, status = ?, shift_id = ? WHERE id = ?");
-                    if ($stmt->execute([$employee_code, $punch_time, $punch_state, $status, $shift_id, $log_id])) {
-                        $success_message = "Attendance log ID {$log_id} updated successfully.";
-                        log_audit_action($pdo, 'edit_attendance_log', "Edited log ID {$log_id} for {$employee_code} to {$punch_time}");
-                    } else {
-                        $error_message = "Failed to update attendance log ID {$log_id}.";
-                    }
-                }
-                break;
-            case 'delete_log':
-                if (empty($log_id)) {
-                    $error_message = "Log ID is required to delete an attendance log.";
-                } else {
-                    $stmt = $pdo->prepare("DELETE FROM attendance_logs WHERE id = ?");
-                    if ($stmt->execute([$log_id])) {
-                        $success_message = "Attendance log ID {$log_id} deleted successfully.";
-                        log_audit_action($pdo, 'delete_attendance_log', "Deleted log ID {$log_id}");
-                    } else {
-                        $error_message = "Failed to delete attendance log ID {$log_id}.";
-                    }
-                }
-                break;
-            default:
-                $error_message = "Invalid action requested.";
-                break;
-        }
-    } catch (PDOException $e) {
-        $error_message = "Database error: " . $e->getMessage();
-        error_log("Attendance log action error: " . $e->getMessage());
-    }
-    // Redirect to prevent form resubmission on refresh
-    header("Location: attendance_logs.php?success=" . urlencode($success_message) . "&error=" . urlencode($error_message));
-    exit();
-}
+// Removed all POST handling for add, edit, delete actions as per request.
+// This page is now read-only for attendance logs.
 
 $page_title = 'Attendance Logs';
 include __DIR__ . '/../app/templates/header.php'; // Include header after all PHP processing
@@ -104,9 +42,12 @@ $where_sql = $where_clauses ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
 // Fetch users and shifts for dropdowns
 $all_users = $pdo->query("SELECT id, full_name, employee_code FROM users ORDER BY full_name ASC")->fetchAll(PDO::FETCH_ASSOC);
 $all_shifts = $pdo->query("SELECT id, shift_name, start_time, end_time FROM shifts ORDER BY shift_name ASC")->fetchAll(PDO::FETCH_ASSOC);
-$statuses = ['valid', 'invalid'];
+$statuses = ['valid', 'invalid']; // Explicitly define statuses
+// Violation types are no longer used for manual entry but are still relevant if displaying from database
+$violation_types_for_display = ['double_punch', 'late_in', 'early_out', 'manual_invalid', 'missing_punch', 'mismatch_punch_state'];
 
-// Fetch logs (UPDATED SQL)
+
+// Fetch logs
 $sql = "
     SELECT
         al.*,
@@ -128,7 +69,7 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $attendance_logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Calculate expected_in and expected_out for each log
+// Calculate expected_in and expected_out for each log (Logic remains same)
 foreach ($attendance_logs as &$log) {
     if (!empty($log['shift_id'])) {
         foreach ($all_shifts as $shift) {
@@ -160,6 +101,13 @@ $total_pages = ceil($total_logs / $page_size);
 
 <div class="container mt-4">
     <h1 class="h3 mb-4">Attendance Logs</h1>
+
+    <?php if ($error_message): ?>
+        <div class="alert alert-danger" role="alert"><?= htmlspecialchars($error_message) ?></div>
+    <?php endif; ?>
+    <?php if ($success_message): ?>
+        <div class="alert alert-success" role="alert"><?= htmlspecialchars($success_message) ?></div>
+    <?php endif; ?>
 
     <div class="card shadow-sm mb-4">
         <div class="card-header"><h2 class="h5 mb-0">Filter Logs</h2></div>
@@ -201,12 +149,6 @@ $total_pages = ceil($total_logs / $page_size);
         </div>
     </div>
 
-    <div class="d-flex justify-content-end mb-3">
-        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addLogModal">
-            <i class="bi bi-plus-circle me-1"></i> Add New Log
-        </button>
-    </div>
-
     <div class="table-responsive">
         <table class="table table-bordered table-hover align-middle">
             <thead class="table-light">
@@ -217,10 +159,10 @@ $total_pages = ceil($total_logs / $page_size);
                     <th>Punch Time</th>
                     <th>Punch State</th>
                     <th>Status</th>
+                    <th>Violation Type</th>
                     <th>Expected Times</th>
                     <th>Shift</th>
-                    <th class="text-end">Actions</th>
-                </tr>
+                    </tr>
             </thead>
             <tbody>
                 <?php if (empty($attendance_logs)): ?>
@@ -239,6 +181,13 @@ $total_pages = ceil($total_logs / $page_size);
                                 </span>
                             </td>
                             <td>
+                                <?php if (!empty($log['violation_type'])): ?>
+                                    <span class="badge bg-danger"><?= htmlspecialchars(str_replace('_', ' ', ucfirst($log['violation_type']))) ?></span>
+                                <?php else: ?>
+                                    <span class="text-muted">N/A</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
                                 <?php if (!empty($log['expected_in']) || !empty($log['expected_out'])): ?>
                                     In: <?= htmlspecialchars($log['expected_in'] ? date('h:i A', strtotime($log['expected_in'])) : '--') ?><br>
                                     Out: <?= htmlspecialchars($log['expected_out'] ? date('h:i A', strtotime($log['expected_out'])) : '--') ?>
@@ -253,21 +202,7 @@ $total_pages = ceil($total_logs / $page_size);
                                     <span class="text-muted">N/A</span>
                                 <?php endif; ?>
                             </td>
-                            <td class="text-end">
-                                <button class="btn btn-sm btn-warning edit-log-btn"
-                                        data-bs-toggle="modal" data-bs-target="#editLogModal"
-                                        data-id="<?= htmlspecialchars($log['id']) ?>"
-                                        data-employee-code="<?= htmlspecialchars($log['employee_code']) ?>"
-                                        data-punch-time="<?= htmlspecialchars($log['punch_time']) ?>"
-                                        data-punch-state="<?= htmlspecialchars($log['punch_state']) ?>"
-                                        data-status="<?= htmlspecialchars($log['status']) ?>"
-                                        data-shift-id="<?= htmlspecialchars($log['shift_id'] ?? '') ?>"
-                                        title="Edit Log"><i class="bi bi-pencil-fill"></i></button>
-                                <button class="btn btn-sm btn-danger delete-log-btn"
-                                        data-id="<?= htmlspecialchars($log['id']) ?>"
-                                        title="Delete Log"><i class="bi bi-trash-fill"></i></button>
-                            </td>
-                        </tr>
+                            </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
@@ -286,164 +221,5 @@ $total_pages = ceil($total_logs / $page_size);
     </nav>
     <?php endif; ?>
 </div>
-
-<div class="modal fade" id="addLogModal" tabindex="-1" aria-labelledby="addLogModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <form action="attendance_logs.php" method="POST">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addLogModalLabel">Add New Attendance Log</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" name="action" value="add_log">
-                    <div class="mb-3">
-                        <label for="add_employee_code" class="form-label">Employee Code</label>
-                        <select class="form-select" id="add_employee_code" name="employee_code" required>
-                            <option value="">-- Select Employee --</option>
-                            <?php foreach($all_users as $user_option): ?>
-                                <option value="<?= htmlspecialchars($user_option['employee_code']) ?>">
-                                    <?= htmlspecialchars($user_option['full_name']) ?> (<?= htmlspecialchars($user_option['employee_code']) ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="add_punch_time" class="form-label">Punch Time</label>
-                        <input type="datetime-local" class="form-control" id="add_punch_time" name="punch_time" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="add_punch_state" class="form-label">Punch State</label>
-                        <select class="form-select" id="add_punch_state" name="punch_state" required>
-                            <option value="0">In</option>
-                            <option value="1">Out</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="add_status" class="form-label">Status</label>
-                        <select class="form-select" id="add_status" name="status" required>
-                            <?php foreach($statuses as $s): ?>
-                                <option value="<?= htmlspecialchars($s) ?>"><?= htmlspecialchars(ucfirst($s)) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="add_shift_id" class="form-label">Shift</label>
-                        <select class="form-select" id="add_shift_id" name="shift_id">
-                            <option value="">-- No Shift --</option>
-                            <?php foreach($all_shifts as $shift): ?>
-                                <option value="<?= htmlspecialchars($shift['id']) ?>">
-                                    <?= htmlspecialchars($shift['shift_name']) ?> (<?= htmlspecialchars($shift['start_time']) ?> - <?= htmlspecialchars($shift['end_time']) ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Log</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div class="modal fade" id="editLogModal" tabindex="-1" aria-labelledby="editLogModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <form action="attendance_logs.php" method="POST">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editLogModalLabel">Edit Attendance Log</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" name="action" value="edit_log">
-                    <input type="hidden" name="log_id" id="edit_log_id">
-                    <div class="mb-3">
-                        <label for="edit_employee_code" class="form-label">Employee Code</label>
-                        <input type="text" class="form-control" id="edit_employee_code" name="employee_code" readonly>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_punch_time" class="form-label">Punch Time</label>
-                        <input type="datetime-local" class="form-control" id="edit_punch_time" name="punch_time" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_punch_state" class="form-label">Punch State</label>
-                        <select class="form-select" id="edit_punch_state" name="punch_state" required>
-                            <option value="0">In</option>
-                            <option value="1">Out</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_status" class="form-label">Status</label>
-                        <select class="form-select" id="edit_status" name="status" required>
-                            <?php foreach($statuses as $s): ?>
-                                <option value="<?= htmlspecialchars($s) ?>"><?= htmlspecialchars(ucfirst($s)) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_shift_id" class="form-label">Shift</label>
-                        <select class="form-select" id="edit_shift_id" name="shift_id">
-                            <option value="">-- No Shift --</option>
-                            <?php foreach($all_shifts as $shift): ?>
-                                <option value="<?= htmlspecialchars($shift['id']) ?>">
-                                    <?= htmlspecialchars($shift['shift_name']) ?> (<?= htmlspecialchars($shift['start_time']) ?> - <?= htmlspecialchars($shift['end_time']) ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-<form id="deleteLogForm" action="attendance_logs.php" method="POST" style="display:none;">
-    <input type="hidden" name="action" value="delete_log">
-    <input type="hidden" name="log_id" id="delete_log_id">
-</form>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Edit Log Modal Logic
-    const editLogModal = document.getElementById('editLogModal');
-    if (editLogModal) {
-        editLogModal.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            const logId = button.getAttribute('data-id');
-            const employeeCode = button.getAttribute('data-employee-code');
-            const punchTime = button.getAttribute('data-punch-time');
-            const punchState = button.getAttribute('data-punch-state');
-            const status = button.getAttribute('data-status');
-            const shiftId = button.getAttribute('data-shift-id');
-
-            editLogModal.querySelector('#edit_log_id').value = logId;
-            editLogModal.querySelector('#edit_employee_code').value = employeeCode;
-            // Format datetime-local input
-            const formattedPunchTime = punchTime.substring(0, 10) + 'T' + punchTime.substring(11, 16);
-            editLogModal.querySelector('#edit_punch_time').value = formattedPunchTime;
-            editLogModal.querySelector('#edit_punch_state').value = punchState;
-            editLogModal.querySelector('#edit_status').value = status;
-            editLogModal.querySelector('#edit_shift_id').value = shiftId || '';
-        });
-    }
-
-    // Delete Log Logic
-    document.querySelectorAll('.delete-log-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const logId = this.getAttribute('data-id');
-            if (confirm(`Are you sure you want to delete attendance log ID ${logId}? This action cannot be undone.`)) {
-                document.getElementById('delete_log_id').value = logId;
-                document.getElementById('deleteLogForm').submit();
-            }
-        });
-    });
-});
-</script>
 
 <?php include __DIR__ . '/../app/templates/footer.php'; ?>

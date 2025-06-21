@@ -4,10 +4,16 @@
 /**
  * Sanitizes user input to prevent XSS.
  *
- * @param string $data The raw input data.
+ * @param string|null $data The raw input data. Can be null.
+ * @param string $type The type of data (e.g., 'string', 'email').
  * @return string The sanitized data.
  */
-function sanitize_input($data, $type = 'string') {
+function sanitize_input(?string $data, $type = 'string') {
+    // Handle null input gracefully for trim()
+    if ($data === null) {
+        return '';
+    }
+    
     $data = trim($data);
     $data = stripslashes($data);
     $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
@@ -58,6 +64,10 @@ function getStatusBadgeClass($status) {
         'rejected' => 'bg-danger',
         'cancelled' => 'bg-secondary',
         'pending_cancellation_hr' => 'bg-warning text-dark',
+        // Add attendance log specific statuses if needed
+        'valid' => 'bg-success',
+        'invalid' => 'bg-danger',
+        '' => 'bg-light text-dark' // Handle empty string status as a default/neutral
     ];
     return $map[$status] ?? 'bg-light text-dark';
 }
