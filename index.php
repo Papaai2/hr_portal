@@ -65,12 +65,33 @@ include __DIR__ . '/app/templates/header.php';
 ?>
 
 <div class="mb-4">
-    <h1 class="h2">Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?>!</h1>
+    <h1 class="h2 text-white">Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?>!</h1>
     <p class="text-muted">You are logged in as a(n) <strong><?php echo htmlspecialchars(ucfirst($_SESSION['role'])); ?></strong>.</p>
 </div>
 
+<!-- Dashboard Stats Banner -->
 <div id="dashboard-stats" class="dashboard-stats mb-4">
+    <div class="row">
+        <div class="col-md-4 mb-3 mb-md-0">
+            <div class="stat-card">
+                <div class="stat-number">0</div> <!-- This is where JS injects the number -->
+                <div class="stat-label">Pending Requests</div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3 mb-md-0">
+            <div class="stat-card">
+                <div class="stat-number">0</div> <!-- This is where JS injects the number -->
+                <div class="stat-label">Approved This Month</div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3 mb-md-0">
+            <div class="stat-card">
+                <div class="stat-number">0</div> <!-- This is where JS injects the number -->
+                <div class="stat-label">Team Members</div>
+            </div>
+        </div>
     </div>
+</div>
 
 <div class="row g-4">
     <div class="col-lg-8">

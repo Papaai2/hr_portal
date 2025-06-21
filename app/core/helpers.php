@@ -64,7 +64,7 @@ function getStatusBadgeClass($status) {
         'rejected' => 'bg-danger',
         'cancelled' => 'bg-secondary',
         'pending_cancellation_hr' => 'bg-warning text-dark',
-        // Add attendance log specific statuses if needed
+        // Add attendance log specific statuses
         'valid' => 'bg-success',
         'invalid' => 'bg-danger',
         '' => 'bg-light text-dark' // Handle empty string status as a default/neutral

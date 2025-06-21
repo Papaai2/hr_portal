@@ -1,7 +1,5 @@
 /* in file: htdocs/css/style.css */
-/* FINAL, UNIFIED STYLESHEET */
-
-/* --- GENERAL & BOOTSTRAP OVERRIDE STYLES --- */
+/* FINAL, UNIFIED STYLESHEET - Revamped for a more polished Dark Theme */
 
 /* Import Google Font */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
@@ -15,33 +13,45 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
-}
-
-body {
+    overflow-x: hidden; /* Prevent horizontal scroll due to sidebar transitions */
+    background-color: #1a202c; /* Deeper, uniform dark background for entire page */
+    color: #cbd5e0; /* Lighter, subtle grey text for overall readability */
     font-family: 'Poppins', sans-serif;
-    background-color: #f0f2f5; 
-    color: #343a40;
 }
 
 a {
-    color: #007bff;
+    color: #4299e1; /* A more vibrant blue for links */
     text-decoration: none;
     transition: color 0.2s ease-in-out;
 }
 
 a:hover {
-    color: #0056b3;
+    color: #63b3ed; /* Lighter blue on hover for links */
 }
+
+/* Main wrapper for the flex layout */
+#wrapper {
+    min-height: 100vh;
+}
+
+/* Page Content Wrapper to allow sidebar space */
+#page-content-wrapper {
+    min-width: 0;
+    width: 100%;
+}
+
 
 .card {
     border: none;
-    border-radius: 0.75rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-radius: 0.75rem; /* Consistent large radius */
+    background-color: #2d3748; /* Darker, soft grey for card backgrounds */
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4); /* More pronounced, softer shadow */
 }
 
 .card-header {
-    background-color: #ffffff;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    background-color: #242c38; /* Slightly darker header for cards */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08); /* Subtle separator */
+    color: #edf2f7; /* Lighter text for headers */
     font-weight: 600;
     padding: 1.25rem 1.5rem;
     border-top-left-radius: 0.75rem;
@@ -54,94 +64,355 @@ a:hover {
 
 .form-control, .form-select {
     border-radius: 0.5rem;
-    border: 1px solid #ced4da;
+    border: 1px solid #4a5568; /* Darker border for inputs */
+    background-color: #1a202c; /* Matches body background for inputs */
+    color: #edf2f7; /* Lighter input text */
     padding: 0.75rem 1rem;
 }
 
+.form-control::placeholder {
+    color: #a0aec0; /* Muted placeholder text */
+    opacity: 0.8;
+}
+
 .form-control:focus, .form-select:focus {
-    border-color: #80bdff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    border-color: #4299e1; /* Primary blue focus color */
+    box-shadow: 0 0 0 0.2rem rgba(66, 153, 225, 0.25);
+    background-color: #1a202c;
+    color: #edf2f7;
 }
 
 .btn {
     border-radius: 0.5rem;
     font-weight: 500;
     padding: 0.75rem 1.25rem;
+    transition: all 0.2s ease-in-out, transform 0.1s ease-out; /* Added transform for hover effects */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Subtle button shadow */
+}
+
+.btn:hover {
+    transform: translateY(-1px); /* Slight lift on hover */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Adjust button colors for dark theme */
+.btn-primary {
+    background-color: #4299e1;
+    border-color: #4299e1;
+    color: white;
+}
+.btn-primary:hover {
+    background-color: #3182ce;
+    border-color: #3182ce;
+}
+
+.btn-success {
+    background-color: #48bb78;
+    border-color: #48bb78;
+    color: white;
+}
+.btn-success:hover {
+    background-color: #38a169;
+    border-color: #38a169;
+}
+
+.btn-warning {
+    background-color: #ecc94b;
+    border-color: #ecc94b;
+    color: #2d3748; /* Dark text for warning */
+}
+.btn-warning:hover {
+    background-color: #d69e2e;
+    border-color: #d69e2e;
+}
+
+.btn-danger {
+    background-color: #f56565;
+    border-color: #f56565;
+    color: white;
+}
+.btn-danger:hover {
+    background-color: #e53e3e;
+    border-color: #e53e3e;
+}
+
+.btn-outline-secondary {
+    border-color: #718096;
+    color: #a0aec0;
+}
+.btn-outline-secondary:hover {
+    background-color: #718096;
+    color: white;
 }
 
 .table {
-    border-radius: 0.5rem;
+    border-radius: 0.75rem; /* Match card radius */
     overflow: hidden;
+    background-color: #2d3748; /* Matches card background */
+    color: #edf2f7;
 }
 
 .table thead th {
-    background-color: #e9ecef;
-    color: #495057;
+    background-color: #242c38; /* Matches card header background */
+    color: #a0aec0; /* Lighter header text */
     border-bottom: none;
     padding: 1rem;
 }
 
+.table tbody td {
+    border-color: rgba(255, 255, 255, 0.08); /* Lighter border for dark theme */
+}
+
 .table-striped tbody tr:nth-of-type(odd) {
-    background-color: #f8f9fa;
+    background-color: #3a475a; /* Slightly lighter stripe for contrast */
 }
 
 .table-hover tbody tr:hover {
-    background-color: #e2e6ea;
+    background-color: #4a5568; /* Clear hover state */
+}
+
+/* Badge colors for dark theme */
+.badge.bg-success { background-color: #48bb78 !important; }
+.badge.bg-secondary { background-color: #718096 !important; }
+.badge.bg-danger { background-color: #f56565 !important; }
+.badge.bg-warning { background-color: #ecc94b !important; color: #2d3748 !important; }
+.badge.bg-info { background-color: #4299e1 !important; }
+.badge.bg-light { background-color: #a0aec0 !important; color: #2d3748 !important;}
+
+
+/* --- NAV BAR & SIDEBAR STYLES --- */
+
+/* Top Navbar (now fixed-top for its own space) */
+
+.navbar.fixed-top {
+    height: 56px; /* Standard Bootstrap navbar height */
+    z-index: 1030; /* Higher than sidebar for full width */
+    background-color: #242c38 !important; /* Matches card header and sidebar top */
+    border-bottom: none; /* REMOVE THE LINE */
+    box-shadow: none; /* REMOVE THE SHADOW */
+}
+
+.navbar-brand {
+    color: #edf2f7 !important; /* Ensure brand is visible */
+}
+
+.navbar .nav-link {
+    color: #cbd5e0 !important;
+}
+
+.navbar .nav-link:hover {
+    color: #edf2f7 !important;
+}
+
+/* Sidebar Wrapper */
+#sidebar-wrapper {
+    min-height: 100vh;
+    width: 250px; /* Fixed width */
+    background-color: #2d3748; /* Matches card background for sidebar body */
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.4);
+    transition: margin 0.3s ease-in-out; 
+    flex-shrink: 0; 
+    z-index: 1020; 
+    position: fixed; 
+    top: 0;
+    left: 0;
+    overflow-y: auto; 
+    /* Fix for the light blue area: Ensure no gaps here */
+    border-right: none; /* REMOVE THE WHITE LINE */
+}
+
+/* Sidebar Heading (top section - brand area) */
+.sidebar-heading {
+    color: #edf2f7;
+    /* FIX: Explicitly set background and border colors for this area */
+    background-color: #242c38 !important; 
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    height: 56px; /* Match navbar height for alignment */
+    padding-top: 0;
+    padding-bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.sidebar-heading .navbar-brand { /* Style brand inside sidebar heading */
+    color: #edf2f7 !important;
+    padding-left: 1.5rem;
+}
+
+
+/* Sidebar List Group Items */
+.list-group-flush {
+    flex-grow: 1; 
+    padding-bottom: 1rem; 
+}
+.list-group-item {
+    background-color: transparent;
+    border: none;
+    color: #a0aec0; /* Muted text for default items */
+    transition: background-color 0.2s, color 0.2s;
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+}
+
+.list-group-item:hover,
+.list-group-item.active {
+    background-color: #3a475a; /* Slightly lighter hover/active state */
+    color: #edf2f7; /* Brighter text on hover/active */
+    border-radius: 0.5rem; 
+    margin: 0.25rem 0.75rem; 
+}
+
+/* Fix for yellow line on dropdown-toggle */
+.list-group-item.dropdown-toggle {
+    border-color: transparent !important; /* Remove yellow border */
+    box-shadow: none !important; /* Remove any lingering box-shadow */
+    outline: 0 !important; /* Remove outline on focus */
+}
+/* Ensure hover/active states are still visually distinct without the border */
+.list-group-item.dropdown-toggle:hover,
+.list-group-item.dropdown-toggle.active,
+.list-group-item.dropdown-toggle[aria-expanded="true"] {
+    background-color: #3a475a;
+    color: #edf2f7;
+}
+
+.list-group-item i {
+    margin-right: 0.75rem;
+    font-size: 1.1rem;
+}
+
+/* Collapse submenu items */
+.list-group-item .collapse {
+    background-color: #242c38; /* Matches sidebar heading for submenu background */
+    border-radius: 0.5rem;
+    margin: 0 0.75rem 0.25rem 0.75rem; 
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1); /* Inner shadow for depth */
+}
+.list-group-item .collapse .list-group-item-action {
+    padding-left: 3.5rem !important; 
+    font-size: 0.95rem;
+    margin: 0; 
+    border-radius: 0; 
+    color: #a0aec0; /* Muted text for submenu items */
+}
+
+.list-group-item .collapse .list-group-item-action:hover,
+.list-group-item .collapse .list-group-item-action.active {
+    background-color: #4a5568; /* Darker hover/active for sub-items */
+    color: #edf2f7;
+}
+
+/* Sidebar footer (copyright) */
+.sidebar > .mt-auto {
+    color: #718096; /* More muted copyright text */
+    border-top: 1px solid rgba(255, 255, 255, 0.05); 
+    padding-top: 1rem !important;
+}
+
+
+/* Page Content Wrapper */
+#page-content-wrapper {
+    flex-grow: 1; 
+    overflow-x: hidden; 
+    padding-top: 56px; /* Space for the fixed top navbar */
+    background-color: #1a202c; /* Ensure content area matches body background */
+}
+
+/* Main content padding inside the wrapper */
+#page-content-wrapper main {
+    padding: 1.5rem; 
+    padding-bottom: 2rem; 
+}
+
+/* Hamburger icon for sidebar toggle on mobile (will be hidden by media query) */
+#sidebarToggle {
+    background-color: #4299e1; /* Matches primary button */
+    border-color: #4299e1;
+    color: white;
+    position: fixed; 
+    top: 10px; 
+    left: 15px; 
+    z-index: 1031; 
+    display: none; /* Hidden by default, shown by media query */
 }
 
 /* --- DASHBOARD WIDGET STYLES --- */
 
-/* Enhanced Stats Banner */
 .dashboard-stats {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%); /* Darker gradient for stats banner */
+    color: #edf2f7;
     border-radius: 15px;
     padding: 2rem;
     margin-bottom: 2rem;
 }
 
 .stat-card {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08); 
     border-radius: 10px;
     padding: 1.5rem;
     text-align: center;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(8px); 
+    border: 1px solid rgba(255, 255, 255, 0.1); 
 }
 
 .stat-number {
     font-size: 2.5rem;
     font-weight: bold;
     margin-bottom: 0.5rem;
+    color: #edf2f7;
 }
 
 .stat-label {
     font-size: 0.9rem;
-    opacity: 0.9;
+    opacity: 0.8;
+    color: #a0aec0; /* More muted label */
 }
 
-/* Calendar Widget */
+/* Calendar Widget (Adjusted for Dark Theme - Preserve original behavior but adapt colors) */
 .calendar-widget {
-    background: white;
+    background: #2d3748; /* Matches card background */
     border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     padding: 1.5rem;
+    color: #edf2f7;
 }
 
 .calendar-header {
-    display: flex;
+    color: #edf2f7;
+    display: flex; 
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
 }
+.calendar-header h3 { 
+    margin-bottom: 0;
+    color: #edf2f7; /* Ensure header text is fully visible */
+}
+.calendar-header .btn { /* Style for calendar navigation buttons */
+    background-color: transparent;
+    border: 1px solid #4a5568;
+    color: #a0aec0;
+}
+.calendar-header .btn:hover {
+    background-color: #4a5568;
+    color: #edf2f7;
+}
 
 .calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    display: grid; 
+    grid-template-columns: repeat(7, 1fr); 
     gap: 0.5rem;
 }
 
+.calendar-day-header { 
+    font-weight: 600;
+    text-align: center;
+    color: #a0aec0; /* Muted day names */
+    padding-bottom: 0.5rem;
+}
+
 .calendar-day {
-    aspect-ratio: 1;
+    aspect-ratio: 1; 
     border-radius: 5px;
     cursor: pointer;
     transition: all 0.2s;
@@ -150,31 +421,43 @@ a:hover {
     justify-content: space-between;
     padding: 4px;
     position: relative;
-    background-color: #f8f9fa; /* Consistent off-white for all days */
+    background-color: #3a475a; /* UNIFORM DEFAULT COLOR FOR ALL NON-VACATION DAYS */
+    color: #edf2f7;
+    text-align: center; 
 }
 
 .calendar-day:hover {
-    background-color: #e9ecef; /* Slightly darker hover */
+    background-color: #4a5568; /* Darker hover */
+}
+
+.calendar-day.empty { 
+    /* Removed background-color override, now inherits from .calendar-day */
+    cursor: default;
+    color: #718096; /* Muted text color for empty days */
+}
+
+
+
+.calendar-day.weekend .day-number {
+    color: #a0aec0; /* Lighter gray for weekend numbers */
 }
 
 .day-number {
     font-weight: 500;
-    font-size: 0.8em;
-    align-self: flex-start;
+    font-size: 0.9em; 
+    align-self: flex-start; 
+    width: 100%; 
+    text-align: left; 
 }
 
-.calendar-day.weekend .day-number {
-    color: #6c757d;
-}
 
 .calendar-day.has-leave {
-    background-color: #28a745; /* Solid green for leave days */
+    background-color: #48bb78; /* Solid green for leave days (from success badge) */
     color: #ffffff;             
-    overflow: hidden;
 }
 
 .calendar-day.has-leave:hover {
-    background-color: #218838; /* Darker green on hover */
+    background-color: #38a169; /* Darker green on hover */
 }
 
 .calendar-day.has-leave .day-number {
@@ -189,64 +472,113 @@ a:hover {
     line-height: 1.2;
     text-align: left;
     max-height: calc(100% - 20px);
-}
-
-.calendar-day.has-leave .leave-entries {
-    position: absolute;
-    bottom: 2px;
-    left: 2px;
-    right: 2px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    margin-top: auto; 
 }
 
 .calendar-day.has-leave .leave-entry {
-    font-size: 0.7em;
-    background-color: rgba(0, 0, 0, 0.15); 
+    background-color: rgba(0, 0, 0, 0.35); /* Darker semi-transparent for contrast */
     color: #ffffff;
-    max-width: 100%;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     border-radius: 3px;
     padding: 1px 4px;
-    margin-top: 1px;
+    margin-top: 2px;
 }
+
+.leave-entries {
+    width: 100%;
+    overflow-y: auto;
+    font-size: 0.65em;
+    line-height: 1.2;
+    text-align: left;
+    max-height: calc(100% - 20px);
+    margin-top: auto; 
+}
+
+.calendar-day.has-leave .leave-entry {
+    background-color: rgba(0, 0, 0, 0.35); /* Darker semi-transparent for contrast */
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-radius: 3px;
+    padding: 1px 4px;
+    margin-top: 2px;
+}
+
 
 /* Quick Actions Panel */
 .quick-actions {
-    background: white;
+    background: #2d3748; /* Matches card background */
     border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     padding: 1.5rem;
 }
 
 .quick-action-btn {
-    display: flex;
+    border: 2px solid #4a5568; /* Matches input border */
+    color: #edf2f7;
+    display: flex; 
     align-items: center;
     padding: 1rem;
-    border: 2px solid #e9ecef;
     border-radius: 8px;
     text-decoration: none;
-    color: #495057;
-    transition: all 0.2s;
     margin-bottom: 1rem;
 }
 
+.quick-action-btn:last-child {
+    margin-bottom: 0; 
+}
+
+
 .quick-action-btn:hover {
-    border-color: #007bff;
-    background-color: #f8f9fa;
-    transform: translateY(-2px);
+    border-color: #4299e1; /* Primary blue border on hover */
+    background-color: #3a475a; /* Slightly lighter hover background */
+    transform: translateY(-1px); /* Add a subtle lift effect */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .quick-action-icon {
     font-size: 1.5rem;
     margin-right: 1rem;
-    color: #007bff;
+    color: #4299e1; /* Primary blue icon color */
 }
 
+/* Progress bars for leave balances */
+.balance-progress {
+    height: 8px;
+    background-color: #4a5568; /* Adjusted for dark theme */
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.balance-progress-bar {
+    height: 100%;
+    /* Keep original gradient for vibrancy, or adjust if desired */
+    background: linear-gradient(90deg, #48bb78, #ecc94b, #f56565); /* Updated colors to match new theme */
+    transition: width 0.3s ease;
+}
+
+
 /* --- NOTIFICATION STYLES --- */
+
+#notification-bell {
+    color: #edf2f7 !important; /* Ensure bell icon is visible */
+}
+
+#notification-count {
+    background-color: #f56565 !important; /* Red badge (danger) */
+    color: white !important;
+}
+
+#notification-dropdown {
+    background-color: #2d3748; /* Matches card background for dropdown */
+    border: none;
+    border-radius: 0.75rem;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
 
 #notification-list {
     min-width: 320px;
@@ -258,35 +590,142 @@ a:hover {
 #notification-list .dropdown-item {
     white-space: normal;
     padding: 0.75rem 1.25rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08); /* Subtle separator */
+    color: #edf2f7;
 }
 
 #notification-list .dropdown-item:last-child {
     border-bottom: none;
 }
 
+#notification-list .dropdown-item:hover {
+    background-color: #3a475a; /* Hover for individual notifications */
+}
+
 #notification-list .notification-message {
     font-size: 0.9em;
     font-weight: 500;
-    color: #343a40;
+    color: #edf2f7;
 }
 
 #notification-list .notification-time {
     font-size: 0.75em;
-    color: #6c757d;
+    color: #a0aec0; /* Muted time text */
     display: block;
     margin-top: 0.25rem;
 }
 
 #notification-list .dropdown-item.unread .notification-message {
     font-weight: 600;
-    color: #007bff;
+    color: #4299e1; /* Highlight unread with primary blue */
 }
 
-/* --- MOBILE RESPONSIVENESS --- */
+.dropdown-header {
+    color: #a0aec0 !important; /* Header text in dropdowns */
+    font-size: 0.8em;
+    text-transform: uppercase;
+    padding: 0.5rem 1.25rem;
+}
+
+.text-muted {
+    color: #a0aec0 !important; /* Ensure muted text is visible */
+}
+
+/* --- Mobile Responsiveness --- */
+
+/* Sidebar Toggle Functionality (Desktop) */
+@media (min-width: 992px) {
+    #sidebar-wrapper {
+        margin-left: 0; 
+        position: fixed; 
+        top: 0;
+        left: 0;
+        z-index: 1020; 
+    }
+    #page-content-wrapper {
+        margin-left: 250px; 
+    }
+    #sidebarToggle {
+        display: none; 
+    }
+     .navbar.fixed-top {
+        padding-left: 250px; 
+        width: calc(100% - 250px); 
+        left: 250px; 
+        /* Ensure items are pushed to the right, might not need !important */
+        /* justify-content: flex-end; */ 
+    }
+    .navbar-brand {
+        display: none; 
+    }
+}
+
+/* Sidebar Offcanvas Functionality (Mobile) */
+@media (max-width: 991.98px) {
+    #sidebar-wrapper {
+        margin-left: -250px; 
+        position: fixed; 
+        z-index: 1040; 
+        height: 100vh; 
+        background-color: #2d3748; /* Match card background for offcanvas */
+        box-shadow: 4px 0 15px rgba(0,0,0,0.5); /* Stronger shadow for slide-out */
+    }
+    #sidebar-wrapper.show { 
+        margin-left: 0; 
+    }
+    #page-content-wrapper {
+        margin-left: 0; 
+        width: 100%;
+    }
+    #sidebarToggle {
+        display: block; 
+        position: absolute; 
+        left: 15px; 
+        top: 10px; 
+        z-index: 1031; 
+    }
+    .navbar.fixed-top .container-fluid {
+        justify-content: space-between; 
+    }
+     .navbar-brand {
+        margin-left: auto; 
+        margin-right: auto;
+    }
+}
 
 @media (max-width: 768px) {
-    .calendar-day.has-leave .leave-entries {
-        display: none;
+    .dashboard-stats {
+        padding: 1rem;
     }
+    
+    .stat-number {
+        font-size: 2rem;
+    }
+    
+    .calendar-grid {
+        gap: 0.25rem;
+    }
+    
+    .quick-action-btn {
+        padding: 0.75rem;
+    }
+
+    .calendar-day.has-leave .leave-entries {
+        display: none; 
+    }
+}
+
+/* Specific fix for tables in dark theme */
+.table.table-bordered {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+.table.table-bordered th, .table.table-bordered td {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Footer styling */
+.footer {
+    background-color: #242c38 !important; /* Match top navbar/sidebar heading */
+    color: #a0aec0 !important; /* Muted text */
+    border-top: 1px solid rgba(255,255,255,0.05);
 }

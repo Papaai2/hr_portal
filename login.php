@@ -4,6 +4,7 @@
 // No need for bootstrap.php, as we don't want to redirect logged-in users away from this page.
 require_once __DIR__ . '/app/core/database.php';
 require_once __DIR__ . '/app/core/config.php';
+require_once __DIR__ . '/app/core/helpers.php'; // ADD THIS LINE
 
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
