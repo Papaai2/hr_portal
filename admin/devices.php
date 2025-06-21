@@ -1,7 +1,4 @@
 <?php
-// in file: admin/devices.php
-// FINAL ENHANCED VERSION with Status Check and fixed Modal logic
-
 require_once __DIR__ . '/../app/bootstrap.php';
 require_once __DIR__ . '/../app/core/drivers/EnhancedDriverFramework.php';
 require_once __DIR__ . '/../app/core/drivers/FingertecDriver.php';
@@ -12,7 +9,6 @@ require_role(['admin', 'hr_manager']);
 $error_message = '';
 $success_message = $_GET['success'] ?? '';
 
-// --- Form Processing at the Top ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $device_id = filter_input(INPUT_POST, 'device_id', FILTER_VALIDATE_INT);
     $name = trim($_POST['name'] ?? '');
@@ -26,11 +22,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error_message = 'The provided IP address is not valid.';
     } else {
         try {
-            if ($device_id) { // Update existing device
+            if ($device_id) {
                 $stmt = $pdo->prepare("UPDATE devices SET name = ?, ip_address = ?, port = ?, device_brand = ? WHERE id = ?");
                 $stmt->execute([$name, $ip_address, $port, $device_brand, $device_id]);
                 $success_message = 'Device updated successfully.';
-            } else { // Add new device
+            } else {
                 $stmt = $pdo->prepare("INSERT INTO devices (name, ip_address, port, device_brand) VALUES (?, ?, ?, ?)");
                 $stmt->execute([$name, $ip_address, $port, $device_brand]);
                 $success_message = 'Device added successfully.';
@@ -38,12 +34,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header("Location: devices.php?success=" . urlencode($success_message));
             exit();
         } catch (PDOException $e) {
-            $error_message = 'Database error: Could not save the device. ' . $e->getMessage();
+            $error_message = 'Database error: ' . $e->getMessage();
         }
     }
 }
 
-// --- Data Fetching ---
 $devices = $pdo->query("SELECT * FROM devices ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 function get_driver(?string $brand): ?EnhancedBaseDriver {
@@ -58,12 +53,11 @@ function get_driver(?string $brand): ?EnhancedBaseDriver {
     return null;
 }
 
-// Loop through devices to check their live status
+// FIXED: Use the new, fast ping() method for status checks.
 foreach ($devices as &$device) {
     $driver = get_driver($device['device_brand']);
-    if ($driver && $driver->connect($device['ip_address'], (int)$device['port'], $device['communication_key'] ?? '0')) {
+    if ($driver && $driver->ping($device['ip_address'], (int)$device['port'])) {
         $device['status'] = 'Online';
-        $driver->disconnect();
     } else {
         $device['status'] = 'Offline';
     }
@@ -100,7 +94,7 @@ include __DIR__ . '/../app/templates/header.php';
                 </thead>
                 <tbody>
                     <?php if (empty($devices)): ?>
-                        <tr><td colspan="5" class="text-center p-4">No devices found. Click "Add New Device" to begin.</td></tr>
+                        <tr><td colspan="5" class="text-center p-4">No devices found.</td></tr>
                     <?php else: ?>
                         <?php foreach ($devices as $device): ?>
                             <tr>
@@ -178,33 +172,22 @@ include __DIR__ . '/../app/templates/header.php';
 document.addEventListener('DOMContentLoaded', function() {
     const deviceModal = document.getElementById('deviceModal');
     if (!deviceModal) return;
-
-    const modalTitle = document.getElementById('deviceModalLabel');
-    const deviceForm = document.getElementById('deviceForm');
-    const deviceIdInput = document.getElementById('form_device_id');
-    const nameInput = document.getElementById('form_name');
-    const ipInput = document.getElementById('form_ip_address');
-    const portInput = document.getElementById('form_port');
-    const brandInput = document.getElementById('form_device_brand');
-
     deviceModal.addEventListener('show.bs.modal', function(event) {
         const button = event.relatedTarget;
-        
-        // Check if the button that triggered the modal is for editing
-        if (button && button.classList.contains('edit-device-btn')) {
-            // Edit Mode
+        const modalTitle = document.getElementById('deviceModalLabel');
+        const form = document.getElementById('deviceForm');
+        if (button.classList.contains('edit-device-btn')) {
             modalTitle.textContent = 'Edit Device';
-            deviceIdInput.value = button.dataset.id;
-            nameInput.value = button.dataset.name;
-            ipInput.value = button.dataset.ip;
-            portInput.value = button.dataset.port;
-            brandInput.value = button.dataset.brand;
+            form.querySelector('#form_device_id').value = button.dataset.id;
+            form.querySelector('#form_name').value = button.dataset.name;
+            form.querySelector('#form_ip_address').value = button.dataset.ip;
+            form.querySelector('#form_port').value = button.dataset.port;
+            form.querySelector('#form_device_brand').value = button.dataset.brand;
         } else {
-            // Add Mode
             modalTitle.textContent = 'Add New Device';
-            deviceForm.reset();
-            deviceIdInput.value = ''; // Ensure ID is cleared
-            portInput.value = '4370'; // Default port
+            form.reset();
+            form.querySelector('#form_device_id').value = '';
+            form.querySelector('#form_port').value = '4370';
         }
     });
 });

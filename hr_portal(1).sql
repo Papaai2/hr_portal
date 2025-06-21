@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 21, 2025 at 03:16 AM
+-- Generation Time: Jun 21, 2025 at 02:44 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -156,7 +156,7 @@ TRUNCATE TABLE `devices`;
 --
 
 INSERT INTO `devices` (`id`, `name`, `ip_address`, `port`, `device_type`, `device_brand`, `serial_number`, `communication_key`, `is_active`, `last_sync_timestamp`, `created_at`, `updated_at`) VALUES
-(2, 'TRy 1', '127.0.0.1', 4370, 'ZKTeco', 'ZKTeco', 'TEST-SN-12345', '0', 1, NULL, '2025-06-20 22:01:03', '2025-06-20 23:11:22'),
+(2, 'TRy 1', '127.0.0.1', 8100, 'ZKTeco', 'ZKTeco', 'TEST-SN-12345', '0', 1, NULL, '2025-06-20 22:01:03', '2025-06-21 11:15:51'),
 (4, 'TRy 2', '127.0.0.1', 8099, 'ZKTeco', 'Fingertec', NULL, '0', 1, NULL, '2025-06-20 22:12:34', '2025-06-20 22:56:47');
 
 -- --------------------------------------------------------

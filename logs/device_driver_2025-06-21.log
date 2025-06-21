@@ -166,3 +166,153 @@
 [2025-06-21 15:37:13] [ERROR] Connection attempt 5 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
 [2025-06-21 15:37:13] [INFO] Attempting connection via stream_socket
 [2025-06-21 15:37:14] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:37:18] [ERROR] Connection attempt 2 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:37:22] [ERROR] Connection attempt 3 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:37:26] [ERROR] Connection attempt 4 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:37:30] [ERROR] Connection attempt 5 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:37:30] [ERROR] All connection methods failed for 127.0.0.1:8100
+[2025-06-21 15:37:30] [INFO] Attempting to connect to 127.0.0.1:8099
+[2025-06-21 15:37:30] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:37:31] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:37:35] [ERROR] Connection attempt 2 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:37:39] [ERROR] Connection attempt 3 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:37:43] [ERROR] Connection attempt 4 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:37:47] [ERROR] Connection attempt 5 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:37:47] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:37:48] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:37:52] [ERROR] Connection attempt 2 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:37:56] [ERROR] Connection attempt 3 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:38:00] [ERROR] Connection attempt 4 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:38:04] [ERROR] Connection attempt 5 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:38:04] [INFO] Attempting connection via stream_socket
+[2025-06-21 15:38:06] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:38:10] [ERROR] Connection attempt 2 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:38:14] [ERROR] Connection attempt 3 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:38:18] [ERROR] Connection attempt 4 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:38:22] [ERROR] Connection attempt 5 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:38:22] [ERROR] All connection methods failed for 127.0.0.1:8099
+[2025-06-21 15:38:41] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 2s and 1 attempts.
+[2025-06-21 15:38:41] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:38:42] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:38:42] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:38:43] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:38:43] [INFO] Attempting connection via stream_socket
+[2025-06-21 15:38:45] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:38:45] [ERROR] All connection methods failed for 127.0.0.1:8100
+[2025-06-21 15:38:45] [INFO] Attempting to connect to 127.0.0.1:8099 with timeout 2s and 1 attempts.
+[2025-06-21 15:38:45] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:38:46] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:38:46] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:38:47] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:38:47] [INFO] Attempting connection via stream_socket
+[2025-06-21 15:38:48] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:38:48] [ERROR] All connection methods failed for 127.0.0.1:8099
+[2025-06-21 15:39:05] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 2s and 1 attempts.
+[2025-06-21 15:39:05] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:39:05] [INFO] Connected successfully via tcp_socket on attempt 1
+[2025-06-21 15:39:05] [INFO] Sending ZKTeco command: 1000
+[2025-06-21 15:39:51] [ERROR] ZKTeco command send attempt 1 failed: Error reading response header
+[2025-06-21 15:39:51] [ERROR] ZKTeco handshake failed: Error reading response header
+[2025-06-21 15:39:51] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:39:52] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:39:52] [INFO] Attempting connection via stream_socket
+[2025-06-21 15:39:53] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:39:53] [ERROR] All connection methods failed for 127.0.0.1:8100
+[2025-06-21 15:39:53] [INFO] Attempting to connect to 127.0.0.1:8099 with timeout 2s and 1 attempts.
+[2025-06-21 15:39:53] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:39:54] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:39:54] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:39:55] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:39:55] [INFO] Attempting connection via stream_socket
+[2025-06-21 15:39:56] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:39:56] [ERROR] All connection methods failed for 127.0.0.1:8099
+[2025-06-21 15:39:56] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 2s and 1 attempts.
+[2025-06-21 15:39:56] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:39:57] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:39:57] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:39:58] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:39:58] [INFO] Attempting connection via stream_socket
+[2025-06-21 15:39:59] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:39:59] [ERROR] All connection methods failed for 127.0.0.1:8100
+[2025-06-21 15:39:59] [INFO] Attempting to connect to 127.0.0.1:8099 with timeout 2s and 1 attempts.
+[2025-06-21 15:39:59] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:40:00] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:40:00] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:40:01] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:40:01] [INFO] Attempting connection via stream_socket
+[2025-06-21 15:40:02] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:40:02] [ERROR] All connection methods failed for 127.0.0.1:8099
+[2025-06-21 15:40:06] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 2s and 1 attempts.
+[2025-06-21 15:40:06] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:40:07] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:40:07] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:40:08] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:40:08] [INFO] Attempting connection via stream_socket
+[2025-06-21 15:40:09] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:40:09] [ERROR] All connection methods failed for 127.0.0.1:8100
+[2025-06-21 15:40:09] [INFO] Attempting to connect to 127.0.0.1:8099 with timeout 2s and 1 attempts.
+[2025-06-21 15:40:09] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:40:10] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:40:10] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:40:11] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:40:11] [INFO] Attempting connection via stream_socket
+[2025-06-21 15:40:12] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:40:12] [ERROR] All connection methods failed for 127.0.0.1:8099
+[2025-06-21 15:40:46] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 2s and 1 attempts.
+[2025-06-21 15:40:46] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:40:46] [INFO] Connected successfully via tcp_socket on attempt 1
+[2025-06-21 15:40:46] [INFO] Sending ZKTeco command: 1000
+[2025-06-21 15:41:10] [ERROR] ZKTeco command send attempt 1 failed: Error reading response header
+[2025-06-21 15:41:10] [ERROR] ZKTeco handshake failed: Error reading response header
+[2025-06-21 15:41:10] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:41:11] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:41:11] [INFO] Attempting connection via stream_socket
+[2025-06-21 15:41:12] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:41:12] [ERROR] All connection methods failed for 127.0.0.1:8100
+[2025-06-21 15:41:12] [INFO] Attempting to connect to 127.0.0.1:8099 with timeout 2s and 1 attempts.
+[2025-06-21 15:41:12] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:41:13] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:41:13] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:41:14] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:41:14] [INFO] Attempting connection via stream_socket
+[2025-06-21 15:41:15] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:41:15] [ERROR] All connection methods failed for 127.0.0.1:8099
+[2025-06-21 15:41:15] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 2s and 1 attempts.
+[2025-06-21 15:41:15] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:41:15] [INFO] Connected successfully via tcp_socket on attempt 1
+[2025-06-21 15:41:15] [INFO] Sending ZKTeco command: 1000
+[2025-06-21 15:41:33] [ERROR] ZKTeco command send attempt 1 failed: Error reading response header
+[2025-06-21 15:41:33] [ERROR] ZKTeco handshake failed: Error reading response header
+[2025-06-21 15:41:33] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:41:34] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:41:34] [INFO] Attempting connection via stream_socket
+[2025-06-21 15:41:35] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:41:35] [ERROR] All connection methods failed for 127.0.0.1:8100
+[2025-06-21 15:41:35] [INFO] Attempting to connect to 127.0.0.1:8099 with timeout 2s and 1 attempts.
+[2025-06-21 15:41:35] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:41:36] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:41:36] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:41:37] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:41:37] [INFO] Attempting connection via stream_socket
+[2025-06-21 15:41:38] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:41:38] [ERROR] All connection methods failed for 127.0.0.1:8099
+[2025-06-21 15:41:38] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 30s and 5 attempts.
+[2025-06-21 15:41:38] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:41:39] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:41:43] [ERROR] Connection attempt 2 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:41:47] [ERROR] Connection attempt 3 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:41:51] [ERROR] Connection attempt 4 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:41:55] [ERROR] Connection attempt 5 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:41:55] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:41:56] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:42:00] [ERROR] Connection attempt 2 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:42:05] [ERROR] Connection attempt 3 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:42:09] [ERROR] Connection attempt 4 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:42:13] [ERROR] Connection attempt 5 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:42:13] [INFO] Attempting connection via stream_socket
+[2025-06-21 15:42:14] [ERROR] Connection attempt 1 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:42:18] [ERROR] Connection attempt 2 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:42:22] [ERROR] Connection attempt 3 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:42:26] [ERROR] Connection attempt 4 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:42:30] [ERROR] Connection attempt 5 via stream_socket failed: Stream socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:42:30] [ERROR] All connection methods failed for 127.0.0.1:8100

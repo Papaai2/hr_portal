@@ -1,0 +1,22 @@
+[2025-06-21 15:42:30] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 30s and 5 attempts.
+[2025-06-21 15:42:30] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:42:31] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:42:44] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 30s and 5 attempts.
+[2025-06-21 15:42:44] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:42:45] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:42:49] [ERROR] Connection attempt 2 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:42:53] [ERROR] Connection attempt 3 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:42:57] [ERROR] Connection attempt 4 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:43:01] [ERROR] Connection attempt 5 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:43:01] [INFO] Attempting connection via fsockopen
+[2025-06-21 15:43:02] [ERROR] Connection attempt 1 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:43:06] [ERROR] Connection attempt 2 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:43:10] [ERROR] Connection attempt 3 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:43:14] [ERROR] Connection attempt 4 via fsockopen failed: Fsockopen connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:43:17] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 30s and 5 attempts.
+[2025-06-21 15:43:17] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:43:18] [ERROR] Connection attempt 1 via tcp_socket failed: TCP Socket connection failed: No connection could be made because the target machine actively refused it (10061)
+[2025-06-21 15:43:34] [INFO] Attempting to connect to 127.0.0.1:8100 with timeout 30s and 5 attempts.
+[2025-06-21 15:43:34] [INFO] Attempting connection via tcp_socket
+[2025-06-21 15:43:34] [INFO] Connected successfully via tcp_socket on attempt 1
+[2025-06-21 15:43:34] [INFO] Sending ZKTeco command: 1000
