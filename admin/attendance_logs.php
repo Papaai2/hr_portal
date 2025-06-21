@@ -1,6 +1,4 @@
 <?php
-// in file: papaai2/hr_portal/hr_portal-8400a68bf21466dd602fc0a4938668fb59725c72/admin/attendance_logs.php
-
 require_once __DIR__ . '/../app/bootstrap.php';
 require_role(['admin', 'hr_manager']);
 
@@ -20,7 +18,7 @@ if (!empty($_GET['user_id'])) {
     $where_clauses[] = "u.id = ?";
     $params[] = $_GET['user_id'];
 }
-if (!empty($_GET['employee_code'])) { // NEW: Filter by employee_code
+if (!empty($_GET['employee_code'])) {
     $where_clauses[] = "al.employee_code LIKE ?";
     $params[] = '%' . $_GET['employee_code'] . '%';
 }
@@ -40,7 +38,6 @@ if (!empty($_GET['violation_type'])) {
 $where_sql = $where_clauses ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
 
 // Fetch logs
-// MODIFIED: Join with users table to get full_name and filter by u.id
 $sql = "
     SELECT
         al.*,
@@ -65,12 +62,8 @@ $attendance_logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Count total for pagination
 $count_sql = "
-    SELECT
-        COUNT(al.id)
-    FROM
-        attendance_logs al
-    LEFT JOIN
-        users u ON al.employee_code = u.employee_code
+    SELECT COUNT(al.id) FROM attendance_logs al
+    LEFT JOIN users u ON al.employee_code = u.employee_code
     {$where_sql}
 ";
 $count_stmt = $pdo->prepare($count_sql);
@@ -80,10 +73,8 @@ $total_pages = ceil($total_logs / $page_size);
 
 // Fetch users for filter dropdown
 $all_users = $pdo->query("SELECT id, full_name, employee_code FROM users ORDER BY full_name ASC")->fetchAll(PDO::FETCH_ASSOC);
-
-// Define possible statuses and violation types for filters
-$statuses = ['unprocessed', 'processed', 'error'];
-$violation_types = ['double_punch', 'late_in', 'early_out']; // Expanded violation types
+$statuses = ['unprocessed', 'processed', 'error', 'corrected'];
+$violation_types = ['double_punch', 'late_in', 'early_out'];
 ?>
 
 <div class="container mt-4">
@@ -105,39 +96,34 @@ $violation_types = ['double_punch', 'late_in', 'early_out']; // Expanded violati
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label for="employee_code" class="form-label">Employee Code</label> <input type="text" class="form-control" id="employee_code" name="employee_code" value="<?= htmlspecialchars($_GET['employee_code'] ?? '') ?>" placeholder="Search by Employee Code">
+                    <label for="employee_code" class="form-label">Employee Code</label>
+                    <input type="text" class="form-control" id="employee_code" name="employee_code" value="<?= htmlspecialchars($_GET['employee_code'] ?? '') ?>" placeholder="Search by Code">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="punch_date" class="form-label">Date</label>
                     <input type="date" class="form-control" id="punch_date" name="punch_date" value="<?= htmlspecialchars($_GET['punch_date'] ?? '') ?>">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="status" class="form-label">Status</label>
                     <select class="form-select" id="status" name="status">
                         <option value="">All Statuses</option>
                         <?php foreach($statuses as $s): ?>
-                            <option value="<?= htmlspecialchars($s) ?>" <?= (isset($_GET['status']) && $_GET['status'] == $s) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars(ucfirst($s)) ?>
-                            </option>
+                            <option value="<?= htmlspecialchars($s) ?>" <?= (isset($_GET['status']) && $_GET['status'] == $s) ? 'selected' : '' ?>><?= htmlspecialchars(ucfirst($s)) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="violation_type" class="form-label">Violation Type</label>
                     <select class="form-select" id="violation_type" name="violation_type">
-                        <option value="">All Violations</option>
+                        <option value="">All Types</option>
                         <?php foreach($violation_types as $vt): ?>
-                            <option value="<?= htmlspecialchars($vt) ?>" <?= (isset($_GET['violation_type']) && $_GET['violation_type'] == $vt) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars(ucwords(str_replace('_', ' ', $vt))) ?>
-                            </option>
+                            <option value="<?= htmlspecialchars($vt) ?>" <?= (isset($_GET['violation_type']) && $_GET['violation_type'] == $vt) ? 'selected' : '' ?>><?= htmlspecialchars(ucwords(str_replace('_', ' ', $vt))) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">Filter Logs</button>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <a href="attendance_logs.php" class="btn btn-outline-secondary w-100">Clear Filters</a>
+                <div class="col-12 d-flex justify-content-end gap-2">
+                    <a href="attendance_logs.php" class="btn btn-outline-secondary">Clear Filters</a>
+                    <button type="submit" class="btn btn-primary">Filter Logs</button>
                 </div>
             </form>
         </div>
@@ -148,56 +134,51 @@ $violation_types = ['double_punch', 'late_in', 'early_out']; // Expanded violati
             <thead class="table-light">
                 <tr>
                     <th>ID</th>
-                    <th>Employee</th> <th>Employee Code</th> <th>Punch Time</th>
+                    <th>Employee</th>
+                    <th>Employee Code</th>
+                    <th>Punch Time</th>
                     <th>Punch State</th>
-                    <th>Device ID</th>
                     <th>Status</th>
                     <th>Violation Type</th>
-                    <th>Expected Times</th> <th>Shift</th> </tr>
+                    <th>Expected Times</th>
+                    <th>Shift</th>
+                </tr>
             </thead>
             <tbody>
                 <?php if (empty($attendance_logs)): ?>
-                    <tr><td colspan="10" class="text-center text-muted">No attendance logs found.</td></tr>
+                    <tr><td colspan="9" class="text-center text-muted">No attendance logs found matching your criteria.</td></tr>
                 <?php else: ?>
                     <?php foreach ($attendance_logs as $log): ?>
                         <tr>
                             <td><?= htmlspecialchars($log['id']) ?></td>
-                            <td><?= htmlspecialchars($log['user_full_name'] ?? 'N/A') ?></td> <td><?= htmlspecialchars($log['employee_code']) ?></td> <td><?= htmlspecialchars($log['punch_time']) ?></td>
-                            <td><?= $log['punch_state'] == 0 ? 'Punch In' : 'Punch Out' ?></td>
-                            <td><?= htmlspecialchars($log['device_id']) ?></td>
+                            <td><?= htmlspecialchars($log['user_full_name'] ?? 'N/A') ?></td>
+                            <td><?= htmlspecialchars($log['employee_code']) ?></td>
+                            <td><?= htmlspecialchars($log['punch_time']) ?></td>
+                            <td><?= $log['punch_state'] == 0 ? '<span class="badge bg-success">In</span>' : '<span class="badge bg-secondary">Out</span>' ?></td>
                             <td>
-                                <span class="badge 
-                                    <?php
-                                        if ($log['status'] === 'error') echo 'bg-danger';
-                                        elseif ($log['status'] === 'processed') echo 'bg-success';
-                                        else echo 'bg-warning text-dark';
-                                    ?>
-                                ">
+                                <span class="badge <?= getStatusBadgeClass($log['status']) ?>">
                                     <?= htmlspecialchars(ucfirst($log['status'])) ?>
                                 </span>
                             </td>
                             <td>
                                 <?php if (!empty($log['violation_type'])): ?>
-                                    <span class="badge 
-                                        <?php
-                                            if ($log['violation_type'] === 'double_punch') echo 'bg-info text-dark';
-                                            else echo 'bg-warning text-dark'; // Default for other violations like late_in, early_out
-                                        ?>
-                                    ">
+                                    <span class="badge bg-danger">
                                         <?= htmlspecialchars(ucwords(str_replace('_', ' ', $log['violation_type']))) ?>
                                     </span>
                                 <?php else: ?>
                                     <span class="text-muted">None</span>
                                 <?php endif; ?>
                             </td>
-                            <td> <?php if (!empty($log['expected_in']) || !empty($log['expected_out'])): ?>
+                            <td>
+                                <?php if (!empty($log['expected_in']) || !empty($log['expected_out'])): ?>
                                     In: <?= htmlspecialchars($log['expected_in'] ? date('h:i A', strtotime($log['expected_in'])) : '--') ?><br>
                                     Out: <?= htmlspecialchars($log['expected_out'] ? date('h:i A', strtotime($log['expected_out'])) : '--') ?>
                                 <?php else: ?>
                                     <span class="text-muted">N/A</span>
                                 <?php endif; ?>
                             </td>
-                            <td> <?= htmlspecialchars($log['shift_name'] ?? 'N/A') ?>
+                            <td>
+                                <?= htmlspecialchars($log['shift_name'] !== null ? $log['shift_name'] : 'N/A') ?>
                                 <?php if (!empty($log['shift_start_time']) && !empty($log['shift_end_time'])): ?>
                                     <br><small class="text-muted"><?= htmlspecialchars(date('h:i A', strtotime($log['shift_start_time']))) ?> - <?= htmlspecialchars(date('h:i A', strtotime($log['shift_end_time']))) ?></small>
                                 <?php endif; ?>
@@ -210,7 +191,7 @@ $violation_types = ['double_punch', 'late_in', 'early_out']; // Expanded violati
     </div>
 
     <?php if ($total_pages > 1): ?>
-    <nav aria-label="Attendance log pagination">
+    <nav aria-label="Pagination">
         <ul class="pagination justify-content-center">
             <?php for ($i = 1; $i <= $total_pages; $i++): ?>
                 <li class="page-item<?= $i === $page ? ' active' : '' ?>">

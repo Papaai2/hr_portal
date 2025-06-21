@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 21, 2025 at 05:55 PM
+-- Generation Time: Jun 21, 2025 at 06:12 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -51,15 +51,9 @@ TRUNCATE TABLE `attendance_logs`;
 --
 
 INSERT INTO `attendance_logs` (`id`, `device_id`, `employee_code`, `punch_time`, `expected_in`, `expected_out`, `punch_state`, `status`, `violation_type`, `notes`, `created_at`) VALUES
-(6, 2, '1', '2025-06-21 10:01:15', '07:45:00', '16:00:00', 0, 'error', 'late_in', NULL, '2025-06-21 15:17:59'),
-(10, 2, '1', '2025-06-21 10:01:15', '07:45:00', '16:00:00', 0, 'error', 'late_in', NULL, '2025-06-21 15:25:45'),
-(11, 2, '2', '2016-02-22 00:28:16', '07:45:00', '16:00:00', 0, 'unprocessed', NULL, NULL, '2025-06-21 15:25:45'),
-(12, 4, '10', '2025-06-21 08:59:10', '07:45:00', '16:00:00', 0, 'error', 'late_in', NULL, '2025-06-21 15:25:45'),
-(13, 4, '11', '2025-06-21 18:01:05', '07:45:00', '16:00:00', 1, 'corrected', NULL, 'State swapped. Action by user #1 on 2025-06-21 18:26:42', '2025-06-21 15:25:45'),
-(14, 2, '1', '2025-06-21 10:01:15', '07:45:00', '16:00:00', 0, 'error', 'late_in', NULL, '2025-06-21 15:26:22'),
-(15, 2, '2', '2016-02-22 00:28:16', '07:45:00', '16:00:00', 1, 'error', 'early_out', NULL, '2025-06-21 15:26:22'),
-(16, 4, '10', '2025-06-21 08:59:10', '07:45:00', '16:00:00', 0, 'error', 'late_in', NULL, '2025-06-21 15:26:22'),
-(17, 4, '11', '2025-06-21 18:01:05', '07:45:00', '16:00:00', 0, 'error', 'late_in', NULL, '2025-06-21 15:26:22');
+(6, 2, '1', '2025-06-21 08:03:15', '07:45:00', '16:00:00', 0, 'error', 'late_in', NULL, '2025-06-21 15:17:59'),
+(10, 4, '1', '2025-06-21 16:18:15', '07:45:00', '16:00:00', 0, 'corrected', NULL, 'State swapped. Action by user #1 on 2025-06-21 19:12:25', '2025-06-21 15:25:45'),
+(18, NULL, '1', '2025-06-21 08:03:00', NULL, NULL, 0, 'corrected', NULL, 'Manually added. Action by user #1 on 2025-06-21 19:10:21', '2025-06-21 16:10:21');
 
 -- --------------------------------------------------------
 
@@ -113,7 +107,10 @@ INSERT INTO `audit_logs` (`id`, `user_id`, `action`, `details`, `created_at`) VA
 (26, 1, 'update_shift', 'Updated shift \'Fixed\' (ID: 1).', '2025-06-21 01:05:14'),
 (27, 1, 'add_request_comment', 'User \'Joseph Ashraf\' added a comment to request #4.', '2025-06-21 01:14:28'),
 (28, 1, 'update_shift', 'Updated shift \'Fixed\' (ID: 1).', '2025-06-21 01:15:43'),
-(29, 1, 'swap_punch_state', '{\"log_id\":13}', '2025-06-21 15:26:42');
+(29, 1, 'swap_punch_state', '{\"log_id\":13}', '2025-06-21 15:26:42'),
+(30, 1, 'delete_attendance_punch', '{\"log_id\":17}', '2025-06-21 16:03:05'),
+(31, 1, 'add_manual_punch', '{\"employee_code\":\"1\",\"punch_time\":\"2025-06-21T08:03\"}', '2025-06-21 16:10:21'),
+(32, 1, 'swap_punch_state', '{\"log_id\":10}', '2025-06-21 16:12:25');
 
 -- --------------------------------------------------------
 
@@ -564,13 +561,13 @@ ALTER TABLE `vacation_requests`
 -- AUTO_INCREMENT for table `attendance_logs`
 --
 ALTER TABLE `attendance_logs`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
 
 --
 -- AUTO_INCREMENT for table `departments`
